@@ -15,6 +15,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <time.h>
 
 // include GLEW to access OpenGL 3.3 functions
 #include <GL/glew.h>
@@ -22,6 +23,9 @@
 
 // GLUT is the toolkit to interface with the OS
 #include <GL/freeglut.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <IL/il.h>
 
@@ -32,7 +36,7 @@
 #include "VertexAttrDef.h"
 #include "geometry.h"
 #include "Texture_Loader.h"
-//#include "AABB.h"
+#include "AABB.h"
 
 #include "avtFreeType.h"
 
@@ -97,10 +101,10 @@ int camera = 3;
 int alturaPredios[Q_PREDIOS][Q_PREDIOS];
 int larguraPredio = 32;
 int comprimentoPredio = 32;
-/*
+
 //bounding boxes do aviao
 AABB aabb;
-AABB aabb1;*/
+bool bateu = false;
 
 // Definicoes criadas
 #define PI 3.14159265
@@ -341,19 +345,21 @@ void renderAviao() {
 
 			popMatrix(MODEL);
 			objId++;
-			if (!o && !p && (rotPlaneH > 0.3f || rotPlaneH < -0.3f)) {
-				if (rotPlaneH > 0.0f)
-					rotPlaneH -= 0.2f;
-				else
-					rotPlaneH += 0.2f;
+			if (!bateu) {
+				if (!o && !p && (rotPlaneH > 0.3f || rotPlaneH < -0.3f)) {
+					if (rotPlaneH > 0.0f)
+						rotPlaneH -= 0.2f;
+					else
+						rotPlaneH += 0.2f;
+				}
+				if (!q && !a && (rotPlaneV > 0.3f || rotPlaneV < -0.3f)) {
+					if (rotPlaneV > 0.0f)
+						rotPlaneV -= 0.2f;
+					else
+						rotPlaneV += 0.2f;
+				}
+				helice += 2.0f;
 			}
-			if (!q && !a && (rotPlaneV > 0.3f || rotPlaneV < -0.3f)) {
-				if (rotPlaneV > 0.0f)
-					rotPlaneV -= 0.2f;
-				else
-					rotPlaneV += 0.2f;
-			}
-			helice += 2.0f;
 		}
 	}
 }
@@ -510,27 +516,65 @@ void renderCity() {
 		}
 	}
 }
-/*
-void updateAABB(AABB* aabb, float posX, float posY, float posZ) {
+
+// ------------------------------------------------------------
+//
+// Collisions
+//
+float max(float* values, int numVals) {
+	float maxVal = std::numeric_limits<float>::lowest();
+	for (int i = 0; i < numVals; i++) {
+		if (values[i] > maxVal) {
+			maxVal = values[i];
+		}
+	}
+	return maxVal;
+}
+
+float min(float* values, int numVals) {
+	float minVal = std::numeric_limits<float>::max();
+	for (int i = 0; i < numVals; i++) {
+		if (values[i] < minVal) {
+			minVal = values[i];
+		}
+	}
+	return minVal;
+}
+
+float clamp(float value, float min, float max) {
+	return std::max(min, std::min(max, value));
+}
+
+void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, float posY, float posZ) {
 	glm::vec4 newvert1 = aabb->vert1;
 	glm::vec4 newvert2 = aabb->vert2;
 	glm::vec4 newvert3 = aabb->vert3;
 	glm::vec4 newvert4 = aabb->vert4;
 	glm::mat4 trans;
-
+	
 	trans = glm::mat4(1.0f);
-	trans = glm::rotate(trans, rot, glm::vec3(0.0, 1.0, 0.0));
+	trans = glm::rotate(trans, -rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
 	newvert1 = trans * newvert1;
 	newvert2 = trans * newvert2;
 	newvert3 = trans * newvert3;
 	newvert4 = trans * newvert4;
 
 	trans = glm::mat4(1.0f);
-	trans = glm::translate(trans, glm::vec3(posX, posY, posZ));
+	trans = glm::translate(trans, glm::vec3(posX, 0, posZ));
 	newvert1 = trans * newvert1;
 	newvert2 = trans * newvert2;
 	newvert3 = trans * newvert3;
 	newvert4 = trans * newvert4;
+	printf("Rot:  %f\n", rotasaoLado);
+
+	/*
+	trans = glm::mat4(1.0f);
+	trans = glm::rotate(trans, rotasaoCima, glm::vec3(0.0, 0.0, 1.0));
+	newvert1 = trans * newvert1;
+	newvert2 = trans * newvert2;
+	newvert3 = trans * newvert3;
+	newvert4 = trans * newvert4;*/
+
 
 	aabb->v1 = newvert1;
 	aabb->v2 = newvert2;
@@ -553,12 +597,91 @@ void updateAABB(AABB* aabb, float posX, float posY, float posZ) {
 	aabb->br[2] = maxZ;
 
 	//printf("tlX:%f tlY:%f brX:%f brY:%f\n", aabb->tl[0], aabb->tl[2], aabb->br[0], aabb->br[2]);
+	/*
+	glm::vec4 newvert1A = aabb->vert1A;
+	glm::vec4 newvert2A = aabb->vert2A;
+	glm::vec4 newvert3A = aabb->vert3A;
+	glm::vec4 newvert4A = aabb->vert4A;
+	glm::mat4 transA;
+
+	transA = glm::mat4(1.0f);
+	transA = glm::rotate(transA, rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
+	newvert1A = transA * newvert1A;
+	newvert2A = transA * newvert2A;
+	newvert3A = transA * newvert3A;
+	newvert4A = transA * newvert4A;
+
+	
+	transA = glm::mat4(1.0f);
+	transA = glm::rotate(transA, rotasaoCima, glm::vec3(0.0, 0.0, 1.0));
+	newvert1A = transA * newvert1A;
+	newvert2A = transA * newvert2A;
+	newvert3A = transA * newvert3A;
+	newvert4A = transA * newvert4A;
+
+	transA = glm::mat4(1.0f);
+	transA = glm::translate(transA, glm::vec3(posX, posY, posZ));
+	newvert1A = transA * newvert1A;
+	newvert2A = transA * newvert2A;
+	newvert3A = transA * newvert3A;
+	newvert4A = transA * newvert4A;
+
+	aabb->v1A = newvert1A;
+	aabb->v2A = newvert2A;
+	aabb->v3A = newvert3A;
+	aabb->v4A = newvert4A;
+
+	float vertsXA[4] = { newvert1A[0], newvert2A[0], newvert3A[0], newvert4A[0] };
+	float vertsZA[4] = { newvert1A[2], newvert2A[2], newvert3A[2], newvert4A[2] };
+
+	float minXA = min(vertsXA, 4);
+	float maxXA = max(vertsXA, 4);
+	float minZA = min(vertsZA, 4);
+	float maxZA = max(vertsZA, 4);
+
+	// find tl and br
+
+	aabb->tlA[0] = minXA;
+	aabb->tlA[2] = minZA;
+	aabb->brA[0] = maxXA;
+	aabb->brA[2] = maxZA;*/
 }
 
 // Car-butter/cheerio collision
 bool checkCollisionBox(float a_xmin, float a_xmax, float a_zmin, float a_zmax, float b_xmin, float b_xmax, float b_zmin, float b_zmax) {
 	return (a_xmin <= b_xmax && a_xmax >= b_xmin) &&
 		(a_zmin <= b_zmax && a_zmax >= b_zmin);
+}
+
+bool checkaColisaoPredios(AABB* aabb) {
+	glm::vec4 v1 = aabb->v1;
+	glm::vec4 v2 = aabb->v2;
+	glm::vec4 v3 = aabb->v3;
+	glm::vec4 v4 = aabb->v4;
+	float CorpoY = posisaoY;
+
+	int predioX = 0;
+	int predioZ = 0;
+
+	predioX = (int) floor(v1[0] / 48.0f);
+	predioZ = (int) floor(v1[2] / 48.0f);
+
+	printf("V1: %f, %f  V4: %f, %f\n", v1[0], v1[2], v4[0], v4[2]);
+
+
+	//printf("Altura do aviao: %f Altura do predio: %d\n", CorpoZ, alturaPredios[predioX][predioZ]);
+	//printf("%d\n", bateu);
+	if (((int)v1[0]) % 48 < 32 && ((int)v1[2]) % 48 < 32) {
+		if (CorpoY < alturaPredios[predioX][predioZ]) {
+			return true;
+		}
+	}
+	else {
+		if (CorpoY < 0.0f) {
+			return true;
+		}
+	}
+	return false;
 }
 
 bool checkaColisao(float ballX, float ballZ, float ballRadius, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3, glm::vec4 v4) {
@@ -572,7 +695,35 @@ bool checkaColisao(float ballX, float ballZ, float ballRadius, glm::vec4 v1, glm
 		(v3[0] >= minBallX && v3[0] <= maxBallX && v3[2] >= minBallZ && v3[2] <= maxBallZ) ||
 		(v4[0] >= minBallX && v4[0] <= maxBallX && v4[2] >= minBallZ && v4[2] <= maxBallZ)) && v1[1] <= alturaCheerio; //adicionei esta condicao para ele poder saltar
 }
-*/
+
+// plane-balls collision
+bool checkCollisionBall(float ballX, float ballZ, float ballRadius, glm::vec4 topLeft, glm::vec4 bottomRight) {
+	// get center point circle first
+	float boxX = topLeft[0], boxZ = topLeft[2];
+	float boxSizeX = std::max(bottomRight[0], topLeft[0]) - std::min(bottomRight[0], topLeft[0]);
+	float boxSizeZ = std::max(bottomRight[2], topLeft[2]) - std::min(bottomRight[2], topLeft[2]);
+
+	float aabb_half_extent_x = boxSizeX / 2.0f;
+	float aabb_half_extent_z = boxSizeZ / 2.0f;
+	float aabb_center_x = boxX + aabb_half_extent_x;
+	float aabb_center_z = boxZ + aabb_half_extent_z;
+
+	float differenceX = ballX - aabb_center_x;
+	float differenceZ = ballZ - aabb_center_z;
+	float clampedX = clamp(differenceX, -aabb_half_extent_x, aabb_half_extent_x);
+	float clampedZ = clamp(differenceZ, -aabb_half_extent_z, aabb_half_extent_z);
+
+	float closestX = aabb_center_x + clampedX;
+	float closestZ = aabb_center_z + clampedZ;
+	float distance[3] = { closestX - ballX, closestZ - ballZ, 0.0f };	// third coord for length func
+
+	return length(distance) < ballRadius;
+}
+
+void handleCollisions() {
+	updateAABB(&aabb, (rotasaoLado * PI / 180), (rotacaoCima * PI / 180), posisaoX, posisaoY, posisaoZ);
+	bateu = checkaColisaoPredios(&aabb);
+}
 // ------------------------------------------------------------
 //
 // Render stufff
@@ -706,10 +857,14 @@ void renderScene(void) {
 	renderCity();
 
 	renderTorre();
+
+	handleCollisions();
 	
-	posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
-	posisaoY += (0.3f + acelerasao) * sin(rotacaoCima * PI / 180);
-	posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
+	if (!bateu) {
+		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
+		posisaoY += (0.3f + acelerasao) * sin(rotacaoCima * PI / 180);
+		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
+	}
 
 	//renderTexto();
 
@@ -1054,12 +1209,14 @@ void init()
 	glEnable(GL_MULTISAMPLE);
 	glClearColor(0.81f, 0.91f, 0.98f, 1.0f);
 
+	srand(time(NULL));
+
 	for (int i = 0; i < Q_PREDIOS; i++) {
 		for (int j = 0; j < Q_PREDIOS; j++) {
-			alturaPredios[i][j] = rand() % 75 + 25;
+			alturaPredios[i][j] = (rand() % 75) + 60;
 		}
 	}
-
+	//ola
 	for (int i = 0; i < 20; i++) {
 		for (int j = 0; j < 3; j++) {
 			if (j == 0)
