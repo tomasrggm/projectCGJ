@@ -8,7 +8,7 @@
 // The code comes with no warranties, use it at your own risk.
 // You may use it, or parts of it, wherever you want.
 // 
-// Author: Jo„o Madeiras Pereira
+// Author: Jo√£o Madeiras Pereira
 //
 
 #include <math.h>
@@ -32,6 +32,7 @@
 #include "VertexAttrDef.h"
 #include "geometry.h"
 #include "Texture_Loader.h"
+//#include "AABB.h"
 
 #include "avtFreeType.h"
 
@@ -86,20 +87,24 @@ float rotasaoLado = 0.0f;
 float rotacaoCima = 0.0f;
 float acelerasao = 0.0f;
 
-float atrasoCamera[100][3];
+float atrasoCamera[20][3];
 int posIndex = 0;
-int camIndex = 0;
+int camIndex = 1;
 int camera = 3;
-bool cameraAnda = false;
 
 // Variaveis criadas para a cidade
-int alturaPredios[20][20];
+#define Q_PREDIOS 21
+int alturaPredios[Q_PREDIOS][Q_PREDIOS];
 int larguraPredio = 32;
 int comprimentoPredio = 32;
+/*
+//bounding boxes do aviao
+AABB aabb;
+AABB aabb1;*/
 
 // Definicoes criadas
 #define PI 3.14159265
-
+	
 // Camera Position
 float camX, camY, camZ;
 
@@ -111,9 +116,9 @@ float alpha = 39.0f, beta = 51.0f;
 float r = 10.0f;
 
 // Frame counting and FPS computation
-long myTime, timebase = 0, frame = 0;
+long myTime,timebase = 0,frame = 0;
 char s[32];
-float lightPos[4] = { 100.0f, 200.0f, 100.0f, 1.0f };
+float lightPos[4] = {496.0f, 400.0f, 496.0f, 1.0f};
 
 void refresh(int value)
 {
@@ -128,7 +133,7 @@ void timer(int value)
 	std::string s = oss.str();
 	glutSetWindow(WindowHandle);
 	glutSetWindowTitle(s.c_str());
-	FrameCount = 0;
+    FrameCount = 0;
 	glutTimerFunc(1000, timer, 0);
 }
 
@@ -142,7 +147,7 @@ void changeSize(int w, int h) {
 
 	float ratio;
 	// Prevent a divide by zero, when window is too short
-	if (h == 0)
+	if(h == 0)
 		h = 1;
 	// set the viewport to be the entire window
 	glViewport(0, 0, w, h);
@@ -152,6 +157,50 @@ void changeSize(int w, int h) {
 	perspective(53.13f, ratio, 0.1f, 1000.0f);
 }
 
+void drawMesh(int objId) {
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+void renderTexto() {
+	//Render text (bitmap fonts) in screen coordinates. So use ortoghonal projection with viewport coordinates.
+	glDisable(GL_DEPTH_TEST);
+	//the glyph contains background colors and non-transparent for the actual character pixels. So we use the blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	int m_viewport[4];
+	glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+	//viewer at origin looking down at  negative z direction
+	pushMatrix(MODEL);
+	loadIdentity(MODEL);
+	pushMatrix(PROJECTION);
+	loadIdentity(PROJECTION);
+	pushMatrix(VIEW);
+	loadIdentity(VIEW);
+	ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+	RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
+	RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
+	popMatrix(PROJECTION);
+	popMatrix(VIEW);
+	popMatrix(MODEL);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+}
 
 void applyRotation() {
 	if (o) {
@@ -237,80 +286,58 @@ void renderAviao() {
 				rotate(MODEL, rotacaoCima, 0, 0, 1);
 			}
 
-			if (objId == 0) {
-				//translate(MODEL, 1.0f, 0.0f, 1.0f);
+			if (objId == 0) { //parte da frente do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				translate(MODEL, 1.0f, 0, 0);
-				//translate(MODEL, -0.5f, -0.5f, -0.5f); //centrar a rotacao no centro do cubo
 				scale(MODEL, 2.0f, 1.0f, 1.0f);
 			}
-			else if (objId == 1) {
+			else if (objId == 1) { //corpo do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				translate(MODEL, 0.125f, 0, 0);
-				scale(MODEL, 1.0f, 1.0f, 1.0f);
+				scale(MODEL, 1.5f, 0.5f, 0.5f);
 				rotate(MODEL, 90, 0, 0, 1);
 			}
-			else if (objId == 2) {
+			else if (objId == 2) { //parte de tras do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				translate(MODEL, -0.2f, 0, 0);
 				scale(MODEL, 4.0f, 1.0f, 1.0f);
 			}
-			else if (objId == 3) {
+			else if (objId == 3) { //asa do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				scale(MODEL, 1.0f, 0.2f, 5.0f);
 			}
-			else if (objId == 4) { //helice
+			else if (objId == 4) { //helice do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				rotate(MODEL, helice, 1, 0, 0);
-				//translate(MODEL, 2.0f - 0.1f, -0.375f, -0.375f);
 				translate(MODEL, 2.0f, 0.0f, 0.0f);
-				//scale(MODEL, 0.2f, 0.75f, 0.75f);
 				rotate(MODEL, 90, 0, 1, 0);
 			}
-			else if (objId == 7) { //helice
+			else if (objId == 7) { //helice do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				rotate(MODEL, helice, 1, 0, 0);
-				//translate(MODEL, 2.0f - 0.1f, -0.375f, -0.375f);
 				translate(MODEL, 2.0f, 0.0f, 0.0f);
-				//scale(MODEL, 0.2f, 0.75f, 0.75f);
 				rotate(MODEL, -90, 0, 1, 0);
 			}
-			else if (objId == 5) {
+			else if (objId == 5) { //Estabilizador vertical do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				translate(MODEL, -1.95f, 0.5f, 0);
 				scale(MODEL, 0.5f, 1.2f, 0.2f);
 			}
-			else if (objId == 6) {
+			else if (objId == 6) { //Estabilizador horizontal do aviao
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 				translate(MODEL, -1.95f, 0, 0);
 				scale(MODEL, 0.5f, 0.2f, 2.0f);
 			}
 
-			// send matrices to OGL
-			computeDerivedMatrix(PROJ_VIEW_MODEL);
-			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-			computeNormalMatrix3x3();
-			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-			// Render mesh
-			glBindVertexArray(myMeshes[use].vao);
-
-			if (!shader.isProgramValid()) {
-				printf("Program Not Valid!\n");
-				exit(1);
-			}
-
-			glDrawElements(myMeshes[use].type, myMeshes[use].numIndexes, GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
+			drawMesh(use);
 
 			popMatrix(MODEL);
 			objId++;
@@ -331,6 +358,123 @@ void renderAviao() {
 	}
 }
 
+void renderTorre() {
+
+	GLint loc;
+	int objId = 11;
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 6; ++j) {
+			int use = 0;
+			glUniform1i(texMode_uniformId, 0);
+			if (objId > 10) {
+				objId--;
+				continue;
+			}
+
+			if (objId == 0 || objId == 7) {
+				use = 2;
+			}
+			else if (objId == 1 || objId == 6) {
+				use = 6;
+			}
+			else if (objId == 2 || objId == 3 || objId == 4 || objId == 5 || objId == 8 || objId == 9 || objId == 10) {
+				use = 1;
+			}
+
+			// send the material
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+			glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+			glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+			glUniform1f(loc, myMeshes[use].mat.shininess);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			if (objId == 0 || objId == 2) {
+				float dif[] = { 0.36f, 0.73f, 0.9f, 0.78f };
+				glUniform4fv(loc, 1, dif);
+			}
+			else if (objId == 1) {
+				float dif[] = { 0.36f, 0.73f, 0.89f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+
+			}
+			else if (objId == 3 || objId == 4 || objId == 5 || objId == 6 || objId == 7 || objId == 8 || objId == 9 || objId == 10) {
+				float dif[] = { 0.97f, 0.98f, 0.98f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+			}
+			else {
+				glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+			}
+			pushMatrix(MODEL);
+
+			translate(MODEL, 496.0f, 3.0, 496.0f);
+
+			if (objId == 0) { //cone
+				glDepthMask(GL_FALSE);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				scale(MODEL, 18.0f, 260.0f, 18.0f);
+			}
+			else if (objId == 1) { //torus de baixo
+				translate(MODEL, 0.0f, 162.0f, 0.0f);
+				//scale(MODEL, 14.0f, 23.0f, 14.0f);
+				scale(MODEL, 9.5f, 4.0f, 9.5f);
+				rotate(MODEL, 90, 0, 0, 1);
+			}
+			else if (objId == 2) { //cilindro do meio transparente
+				glDepthMask(GL_FALSE);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				translate(MODEL, 0.0f, 183.0f, 0.0f);
+				scale(MODEL, 7.5f, 27.0f, 7.5f);
+			}
+			else if (objId == 3) { // cilindro mais gordo de cima
+				translate(MODEL, 0.0f, 202.0f, 0.0f);
+				scale(MODEL, 10.0f, 10.0f, 10.0f);
+			}
+			else if (objId == 4) { //cilindro de cima
+				translate(MODEL, 0.0f, 212.0f, 0.0f);
+				scale(MODEL, 5.0f, 18.0f, 5.0f);
+			}
+			else if (objId == 5) { //antena do topo
+				translate(MODEL, 0.0f, 230.0f, 0.0f);
+				scale(MODEL, 2.0f, 62.0f, 2.0f);
+			}
+			else if (objId == 6) { //torus de cima
+				translate(MODEL, 0.0f, 169.0f, 0.0f);
+				//scale(MODEL, 14.0f, 23.0f, 14.0f);
+				scale(MODEL, 12.0f, 6.5f, 12.0f);
+				rotate(MODEL, 90, 0, 0, 1);
+			}
+			else if (objId == 7) { //cilindro da base
+				//scale(MODEL, 14.0f, 23.0f, 14.0f);
+				//translate(MODEL, 0.0f, 81.0f, 0.0f);
+				scale(MODEL, 10.0f, 270.0f, 10.0f);
+			}
+			else if (objId == 8) { //cilindro do meio nao transparente
+				translate(MODEL, 0.0f, 187.0f, 0.0f);
+				scale(MODEL, 6.0f, 27.0f, 6.0f);
+			}
+			else if (objId == 9) { //base da base
+				translate(MODEL, 0.0f, 1.5f, 0.0f);
+				scale(MODEL, 18.0f, 3.0f, 18.0f);
+			}
+			else if (objId == 10) { //cilindro da base
+				//scale(MODEL, 14.0f, 23.0f, 14.0f);
+				translate(MODEL, 0.0f, 81.0f, 0.0f);
+				scale(MODEL, 6.0f, 162.0f, 6.0f);
+			}
+
+			drawMesh(use);
+			popMatrix(MODEL);
+			objId--;
+
+			glDisable(GL_BLEND);
+			glDepthMask(GL_TRUE);
+		}
+	}
+}
+
 void renderCity() {
 
 	GLint loc;
@@ -338,46 +482,97 @@ void renderCity() {
 	glUniform1i(texMode_uniformId, 0);
 
 	//Do city
-	for (int i = 0; i < 20; i++) {
-		for (int j = 0; j < 20; j++) {
+	for (int i = 0; i < Q_PREDIOS; i++) {
+		for (int j = 0; j < Q_PREDIOS; j++) {
 
-			// send the material
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-			glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-			glUniform4fv(loc, 1, myMeshes[4].mat.diffuse);
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-			glUniform4fv(loc, 1, myMeshes[4].mat.specular);
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-			glUniform1f(loc, myMeshes[4].mat.shininess);
-			pushMatrix(MODEL);
-
-			translate(MODEL, i * 48, 0, j * 48);
-			scale(MODEL, comprimentoPredio, alturaPredios[i][j], larguraPredio);
-
-			// send matrices to OGL
-			computeDerivedMatrix(PROJ_VIEW_MODEL);
-			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-			computeNormalMatrix3x3();
-			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-			// Render mesh
-			glBindVertexArray(myMeshes[4].vao);
-
-			if (!shader.isProgramValid()) {
-				printf("Program Not Valid!\n");
-				exit(1);
+			if (i == 10 && j == 10) {
+				renderTorre();
 			}
+			else {
+				// send the material
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+				glUniform4fv(loc, 1, myMeshes[4].mat.diffuse);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+				glUniform4fv(loc, 1, myMeshes[4].mat.specular);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+				glUniform1f(loc, myMeshes[4].mat.shininess);
+				pushMatrix(MODEL);
 
-			glDrawElements(myMeshes[4].type, myMeshes[4].numIndexes, GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
+				translate(MODEL, i * 48, 0, j * 48);
+				scale(MODEL, comprimentoPredio, alturaPredios[i][j], larguraPredio);
 
-			popMatrix(MODEL);
+				drawMesh(4);
+
+				popMatrix(MODEL);
+			}
 		}
 	}
 }
+/*
+void updateAABB(AABB* aabb, float posX, float posY, float posZ) {
+	glm::vec4 newvert1 = aabb->vert1;
+	glm::vec4 newvert2 = aabb->vert2;
+	glm::vec4 newvert3 = aabb->vert3;
+	glm::vec4 newvert4 = aabb->vert4;
+	glm::mat4 trans;
 
+	trans = glm::mat4(1.0f);
+	trans = glm::rotate(trans, rot, glm::vec3(0.0, 1.0, 0.0));
+	newvert1 = trans * newvert1;
+	newvert2 = trans * newvert2;
+	newvert3 = trans * newvert3;
+	newvert4 = trans * newvert4;
+
+	trans = glm::mat4(1.0f);
+	trans = glm::translate(trans, glm::vec3(posX, posY, posZ));
+	newvert1 = trans * newvert1;
+	newvert2 = trans * newvert2;
+	newvert3 = trans * newvert3;
+	newvert4 = trans * newvert4;
+
+	aabb->v1 = newvert1;
+	aabb->v2 = newvert2;
+	aabb->v3 = newvert3;
+	aabb->v4 = newvert4;
+
+	float vertsX[4] = { newvert1[0], newvert2[0], newvert3[0], newvert4[0] };
+	float vertsZ[4] = { newvert1[2], newvert2[2], newvert3[2], newvert4[2] };
+
+	float minX = min(vertsX, 4);
+	float maxX = max(vertsX, 4);
+	float minZ = min(vertsZ, 4);
+	float maxZ = max(vertsZ, 4);
+
+	// find tl and br
+
+	aabb->tl[0] = minX;
+	aabb->tl[2] = minZ;
+	aabb->br[0] = maxX;
+	aabb->br[2] = maxZ;
+
+	//printf("tlX:%f tlY:%f brX:%f brY:%f\n", aabb->tl[0], aabb->tl[2], aabb->br[0], aabb->br[2]);
+}
+
+// Car-butter/cheerio collision
+bool checkCollisionBox(float a_xmin, float a_xmax, float a_zmin, float a_zmax, float b_xmin, float b_xmax, float b_zmin, float b_zmax) {
+	return (a_xmin <= b_xmax && a_xmax >= b_xmin) &&
+		(a_zmin <= b_zmax && a_zmax >= b_zmin);
+}
+
+bool checkaColisao(float ballX, float ballZ, float ballRadius, glm::vec4 v1, glm::vec4 v2, glm::vec4 v3, glm::vec4 v4) {
+	float alturaCheerio = 0.75;
+	float minBallX = ballX - ballRadius;
+	float maxBallX = ballX + ballRadius;
+	float minBallZ = ballZ - ballRadius;
+	float maxBallZ = ballZ + ballRadius;
+	return ((v1[0] >= minBallX && v1[0] <= maxBallX && v1[2] >= minBallZ && v1[2] <= maxBallZ) ||
+		(v2[0] >= minBallX && v2[0] <= maxBallX && v2[2] >= minBallZ && v2[2] <= maxBallZ) ||
+		(v3[0] >= minBallX && v3[0] <= maxBallX && v3[2] >= minBallZ && v3[2] <= maxBallZ) ||
+		(v4[0] >= minBallX && v4[0] <= maxBallX && v4[2] >= minBallZ && v4[2] <= maxBallZ)) && v1[1] <= alturaCheerio; //adicionei esta condicao para ele poder saltar
+}
+*/
 // ------------------------------------------------------------
 //
 // Render stufff
@@ -401,29 +596,16 @@ void renderScene(void) {
 			acelerasao -= 0.02f;
 		}
 	}
-	/*
-	//atualizar o buffer circular
-	if (cameraAnda) {
-		camIndex = (camIndex + 1) % 100;
-	}
+	
+	//atualizar o buffer circular (atraso da camera)
+	camIndex = (camIndex + 1) % 20;
 
-	if (!cameraAnda) {
-		posIndex = ((posIndex + 1) % 99) + 1;
-		atrasoCamera[posIndex][0] = posisaoX;
-		atrasoCamera[posIndex][1] = posisaoY;
-		atrasoCamera[posIndex][2] = posisaoZ;
-	}
-	else {
-		posIndex = (posIndex + 1) % 100;
-		atrasoCamera[posIndex][0] = posisaoX;
-		atrasoCamera[posIndex][1] = posisaoY;
-		atrasoCamera[posIndex][2] = posisaoZ;
-	}
+	posIndex = (posIndex + 1) % 20;
+	atrasoCamera[posIndex][0] = posisaoX;
+	atrasoCamera[posIndex][1] = posisaoY;
+	atrasoCamera[posIndex][2] = posisaoZ;
 
-	if (posIndex == 1) {
-		cameraAnda = true;
-	}
-	*/
+	
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
@@ -438,6 +620,17 @@ void renderScene(void) {
 	int dirCamera = 1;
 	// set the camera using a function similar to gluLookAt
 	switch (camera) {
+	case 0:
+		if (rotacaoCima <= 295.5f && rotacaoCima > 115.5f) {
+			dirCamera = -1;
+		}
+		// camera movel com motion sickness
+		lookAt(atrasoCamera[camIndex][0] - (10 * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * cos(rotasaoLado * PI / 180), atrasoCamera[camIndex][1] - 10 * sin((rotacaoCima)*PI / 180) + 5 * cos(-rotacaoCima * PI / 180), atrasoCamera[camIndex][2] - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), atrasoCamera[camIndex][0], atrasoCamera[camIndex][1], atrasoCamera[camIndex][2], 0, 1 * dirCamera, 0);
+		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
+		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
+		loadIdentity(PROJECTION);
+		perspective(53.13f, ratio, 0.1f, 1000.0f);
+		break;
 	case 1:
 		/*
 		//camera de cima orto
@@ -452,11 +645,11 @@ void renderScene(void) {
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
 	case 3:
-		if (rotacaoCima <= 295.5f && rotacaoCima > 115.5f) {
+		if (rotacaoCima <= 295.5f && rotacaoCima > 115.5f){
 			dirCamera = -1;
 		}
 		// camera movel
-		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotacaoCima)*PI / 180) + 5 * cos(-rotacaoCima * PI / 180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1 * dirCamera, 0);
+		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180)*cos(rotacaoCima* PI /180)) + 5*sin(-rotacaoCima * PI/180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotacaoCima) * PI / 180) + 5 * cos(-rotacaoCima * PI /180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1*dirCamera, 0);
 		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
 		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
@@ -480,7 +673,7 @@ void renderScene(void) {
 		break;
 	case 6:
 		/*
-		// camera movel sem rato dentro do cami„o
+		// camera movel sem rato dentro do cami√£o
 		lookAt((posisaoAtualX + 3.1 * cos((-rotasao) * PI / 180)) + 0.4 * sin(rotasao * PI / 180), 0.6 + jump, (posisaoAtualY + 3.1 * sin((-rotasao) * PI / 180)) + 0.4 * cos(rotasao * PI / 180), (posisaoAtualX + 5.0 * cos((-rotasao) * PI / 180)) + 0.4 * sin(rotasao * PI / 180), 0.5 + jump, (posisaoAtualY + 5.0 * sin((-rotasao) * PI / 180)) + 0.4 * cos(rotasao * PI / 180), 0, 1, 0);
 		posisaoCamera[0] = (posisaoAtualX + 3.1 * cos((-rotasao) * PI / 180)) + 0.4 * sin(rotasao * PI / 180);
 		posisaoCamera[1] = (posisaoAtualY + 3.1 * sin((-rotasao) * PI / 180)) + 0.4 * cos(rotasao * PI / 180);
@@ -497,14 +690,14 @@ void renderScene(void) {
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
-	//send the light position in eye coordinates
-	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
+		//send the light position in eye coordinates
+		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
 
-	float res[4];
-	multMatrixPoint(VIEW, lightPos, res);   //lightPos definido em World Coord so is converted to eye space
-	glUniform4fv(lPos_uniformId, 1, res);
+		float res[4];
+		multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space
+		glUniform4fv(lPos_uniformId, 1, res);
 
-	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
+	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
 	applyRotation();
 
@@ -512,34 +705,13 @@ void renderScene(void) {
 
 	renderCity();
 
-
+	renderTorre();
+	
 	posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
 	posisaoY += (0.3f + acelerasao) * sin(rotacaoCima * PI / 180);
 	posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
 
-	//Render text (bitmap fonts) in screen coordinates. So use ortoghonal projection with viewport coordinates.
-	glDisable(GL_DEPTH_TEST);
-	//the glyph contains background colors and non-transparent for the actual character pixels. So we use the blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	int m_viewport[4];
-	glGetIntegerv(GL_VIEWPORT, m_viewport);
-
-	//viewer at origin looking down at  negative z direction
-	pushMatrix(MODEL);
-	loadIdentity(MODEL);
-	pushMatrix(PROJECTION);
-	loadIdentity(PROJECTION);
-	pushMatrix(VIEW);
-	loadIdentity(VIEW);
-	ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
-	RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
-	RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
-	popMatrix(PROJECTION);
-	popMatrix(VIEW);
-	popMatrix(MODEL);
-	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
+	//renderTexto();
 
 	glutSwapBuffers();
 }
@@ -597,6 +769,12 @@ void processKeys(unsigned char key, int xx, int yy)
 	case 'h':
 		estaAcelerar = true;
 		break;
+	case '3':
+		camera = 3;
+		break;
+	case '0':
+		camera = 0;
+		break;
 	}
 }
 
@@ -631,7 +809,7 @@ void processKeysUp(unsigned char key, int xx, int yy) {
 void processMouseButtons(int button, int state, int xx, int yy)
 {
 	// start tracking the mouse
-	if (state == GLUT_DOWN) {
+	if (state == GLUT_DOWN)  {
 		startX = xx;
 		startY = yy;
 		if (button == GLUT_LEFT_BUTTON)
@@ -664,8 +842,8 @@ void processMouseMotion(int xx, int yy)
 	float alphaAux, betaAux;
 	float rAux;
 
-	deltaX = -xx + startX;
-	deltaY = yy - startY;
+	deltaX =  - xx + startX;
+	deltaY =    yy - startY;
 
 	// left mouse button: move camera
 	if (tracking == 1) {
@@ -692,10 +870,10 @@ void processMouseMotion(int xx, int yy)
 
 	camX = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f);
 	camZ = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f);
-	camY = rAux * sin(betaAux * 3.14f / 180.0f);
+	camY = rAux *   						       sin(betaAux * 3.14f / 180.0f);
 
-	//  uncomment this if not using an idle or refresh func
-	//	glutPostRedisplay();
+//  uncomment this if not using an idle or refresh func
+//	glutPostRedisplay();
 }
 
 
@@ -707,10 +885,10 @@ void mouseWheel(int wheel, int direction, int x, int y) {
 
 	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
 	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r * sin(beta * 3.14f / 180.0f);
+	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
-	//  uncomment this if not using an idle or refresh func
-	//	glutPostRedisplay();
+//  uncomment this if not using an idle or refresh func
+//	glutPostRedisplay();
 }
 
 // --------------------------------------------------------
@@ -727,7 +905,7 @@ GLuint setupShaders() {
 	shader.loadShader(VSShaderLib::FRAGMENT_SHADER, "shaders/pointlight.frag");
 
 	// set semantics for the shader variables
-	glBindFragDataLocation(shader.getProgramIndex(), 0, "colorOut");
+	glBindFragDataLocation(shader.getProgramIndex(), 0,"colorOut");
 	glBindAttribLocation(shader.getProgramIndex(), VERTEX_COORD_ATTRIB, "position");
 	glBindAttribLocation(shader.getProgramIndex(), NORMAL_ATTRIB, "normal");
 	//glBindAttribLocation(shader.getProgramIndex(), TEXTURE_COORD_ATTRIB, "texCoord");
@@ -742,7 +920,7 @@ GLuint setupShaders() {
 	tex_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap");
 	tex_loc1 = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
 	tex_loc2 = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
-
+	
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
 	// Shader for bitmap Text
@@ -752,7 +930,7 @@ GLuint setupShaders() {
 
 	glLinkProgram(shaderText.getProgramIndex());
 	printf("InfoLog for Text Rendering Shader\n%s\n\n", shaderText.getAllInfoLogs().c_str());
-
+	
 	return(shader.isProgramLinked() && shaderText.isProgramLinked());
 }
 
@@ -779,21 +957,21 @@ void init()
 	// set the camera position based on its spherical coordinates
 	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
 	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r * sin(beta * 3.14f / 180.0f);
+	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//texturas
 	glGenTextures(1, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
-
+	
 	float amb[] = { 0.2f, 0.0f, 0.2f, 1.0f };
 	float diff[] = { 1.0f, 0.86, 0.97f, 1.0f };
-	float spec[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-	float emissive[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float shininess = 100.0f;
+	float spec[] = {0.8f, 0.8f, 0.8f, 1.0f};
+	float emissive[] = {0.0f, 0.0f, 0.0f, 1.0f};
+	float shininess= 100.0f;
 	int texcount = 0;
 
-	// create geometry and VAO of the pawn  0
-	amesh = createPawn();
+	// create geometry and VAO of the torus  0
+	amesh = createTorus(2.0f, 18.0f, 6, 8);
 	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
 	memcpy(amesh.mat.diffuse, diff, 4 * sizeof(float));
 	memcpy(amesh.mat.specular, spec, 4 * sizeof(float));
@@ -802,13 +980,13 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
-	float amb1[] = { 0.3f, 0.0f, 0.0f, 1.0f };
+	float amb1[]= {0.3f, 0.0f, 0.0f, 1.0f};
 	float diff1[] = { 0.8f, 0.0f, 0.6f, 1.0f };
-	float spec1[] = { 0.9f, 0.9f, 0.9f, 1.0f };
-	shininess = 500.0;
+	float spec1[] = {0.9f, 0.9f, 0.9f, 1.0f};
+	shininess=500.0;
 
 	// create geometry and VAO of the cylinder    1
-	amesh = createCylinder(1.5f, 0.5f, 20);
+	amesh = createCylinder(1.0f, 1.0f, 20);
 	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
 	memcpy(amesh.mat.diffuse, diff1, 4 * sizeof(float));
 	memcpy(amesh.mat.specular, spec1, 4 * sizeof(float));
@@ -817,8 +995,8 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
-	// create geometry and VAO of the      2
-	amesh = createCone(1.5f, 0.5f, 20);
+	// create geometry and VAO of the Cone     2
+	amesh = createCone(1.0f, 1.0f, 20);
 	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
 	memcpy(amesh.mat.diffuse, diff, 4 * sizeof(float));
 	memcpy(amesh.mat.specular, spec, 4 * sizeof(float));
@@ -859,20 +1037,30 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
+	// create geometry and VAO of the sphere for skytree tower   6
+	amesh = createSphere(1.0f, 20);
+	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
+	memcpy(amesh.mat.diffuse, diff, 4 * sizeof(float));
+	memcpy(amesh.mat.specular, spec, 4 * sizeof(float));
+	memcpy(amesh.mat.emissive, emissive, 4 * sizeof(float));
+	amesh.mat.shininess = shininess;
+	amesh.mat.texCount = texcount;
+	myMeshes.push_back(amesh);
+
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glFrontFace(GL_CCW);
+	//glEnable(GL_CULL_FACE);
+	//glFrontFace(GL_CCW);
 	glEnable(GL_MULTISAMPLE);
 	glClearColor(0.81f, 0.91f, 0.98f, 1.0f);
 
-	for (int i = 0; i < 20; i++) {
-		for (int j = 0; j < 20; j++) {
+	for (int i = 0; i < Q_PREDIOS; i++) {
+		for (int j = 0; j < Q_PREDIOS; j++) {
 			alturaPredios[i][j] = rand() % 75 + 25;
 		}
 	}
 
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 20; i++) {
 		for (int j = 0; j < 3; j++) {
 			if (j == 0)
 				atrasoCamera[i][j] = posisaoX;
@@ -891,22 +1079,22 @@ void init()
 //
 
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
-	//  GLUT initialization
+//  GLUT initialization
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_DEPTH|GLUT_DOUBLE|GLUT_RGBA|GLUT_MULTISAMPLE);
 
-	glutInitContextVersion(4, 3);
-	glutInitContextProfile(GLUT_CORE_PROFILE);
+	glutInitContextVersion (4, 3);
+	glutInitContextProfile (GLUT_CORE_PROFILE );
 	glutInitContextFlags(GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
 
-	glutInitWindowPosition(100, 100);
+	glutInitWindowPosition(100,100);
 	glutInitWindowSize(WinX, WinY);
 	WindowHandle = glutCreateWindow(CAPTION);
 
 
-	//  Callback Registration
+//  Callback Registration
 	glutDisplayFunc(renderScene);
 	glutReshapeFunc(changeSize);
 
@@ -920,20 +1108,20 @@ int main(int argc, char** argv) {
 	glutKeyboardUpFunc(processKeysUp);
 	glutMouseFunc(processMouseButtons);
 	glutMotionFunc(processMouseMotion);
-	glutMouseWheelFunc(mouseWheel);
+	glutMouseWheelFunc ( mouseWheel ) ;
+	
 
-
-	//	return from main loop
+//	return from main loop
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 
-	//	Init GLEW
+//	Init GLEW
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	printf("Vendor: %s\n", glGetString(GL_VENDOR));
-	printf("Renderer: %s\n", glGetString(GL_RENDERER));
-	printf("Version: %s\n", glGetString(GL_VERSION));
-	printf("GLSL: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+	printf ("Vendor: %s\n", glGetString (GL_VENDOR));
+	printf ("Renderer: %s\n", glGetString (GL_RENDERER));
+	printf ("Version: %s\n", glGetString (GL_VERSION));
+	printf ("GLSL: %s\n", glGetString (GL_SHADING_LANGUAGE_VERSION));
 
 	if (!setupShaders())
 		return(1);
@@ -943,5 +1131,5 @@ int main(int argc, char** argv) {
 	//  GLUT main loop
 	glutMainLoop();
 
-	return(0); 
+	return(0);
 }

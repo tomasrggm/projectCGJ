@@ -49,6 +49,6 @@ void main() {
 				colorOut = vec4(max(intensity*texel.rgb + spec.rgb, texel.rgb), texel.a);
 
 	}else{
-		colorOut = max(intensity * mat.diffuse + spec, mat.ambient);
+		colorOut = vec4(max(intensity * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 	}
 }
