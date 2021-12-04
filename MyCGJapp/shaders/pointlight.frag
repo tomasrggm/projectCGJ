@@ -20,35 +20,34 @@ in Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
-} DataIn;
+} DataIn[6];
 
 void main() {
 	vec4 texel;
 
 	vec4 spec = vec4(0.0);
-
-	vec3 n = normalize(DataIn.normal);
-	vec3 l = normalize(DataIn.lightDir);
-	vec3 e = normalize(DataIn.eye);
-
-	float intensity = max(dot(n,l), 0.0);
-
-	
-	if (intensity > 0.0) {
-
-		vec3 h = normalize(l + e);
-		float intSpec = max(dot(h,n), 0.0);
-		spec = mat.specular * pow(intSpec, mat.shininess);
+	vec4 valuesum = vec4(0.0);
+	for(int i = 0; i < 1; ++i){
+		if(i < 6){
+			vec3 n = normalize(DataIn[i].normal);
+			vec3 l = normalize(DataIn[i].lightDir);
+			vec3 e = normalize(DataIn[i].eye);
+			float intensity = max(dot(n,l), 0.0);
+			if(intensity > 0.0) {
+				vec3 h = normalize(l + e);
+				float intSpec = max(dot(h,n), 0.0);
+				spec = mat.specular * pow(intSpec, mat.shininess);
+			}
+			if(texMode == 1){
+				texel = texture(texmap, DataIn[i].tex_coord);  // texel from helice
+				if(texel.a == 0.0) discard;
+				else
+					valuesum += vec4(max(intensity*texel.rgb + spec.rgb, texel.rgb), texel.a);
+			}else{
+				valuesum += max(intensity * mat.diffuse + spec, mat.ambient);
+			}
+		}
 	}
-	
-	//texturas
-	if (texMode == 1){
-			texel = texture(texmap, DataIn.tex_coord);  // texel from helice
-			if(texel.a == 0.0) discard;
-			else
-				colorOut = vec4(max(intensity*texel.rgb + spec.rgb, texel.rgb), texel.a);
 
-	}else{
-		colorOut = max(intensity * mat.diffuse + spec, mat.ambient);
-	}
+	colorOut = valuesum;
 }

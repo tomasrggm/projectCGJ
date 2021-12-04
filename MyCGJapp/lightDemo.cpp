@@ -66,7 +66,7 @@ GLint texMode_uniformId;
 GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint normal_uniformId;
-GLint lPos_uniformId;
+GLint lPos_uniformId , lPos1_uniformId, lPos2_uniformId, lPos3_uniformId, lPos4_uniformId, lPos5_uniformId;
 GLint tex_loc, tex_loc1, tex_loc2;
 
 GLuint TextureArray[1];
@@ -113,7 +113,8 @@ float r = 10.0f;
 // Frame counting and FPS computation
 long myTime, timebase = 0, frame = 0;
 char s[32];
-float lightPos[4] = { 100.0f, 200.0f, 100.0f, 1.0f };
+int lightFlag = 0;
+float lightPos[4] = { 100.0f, 200.0f, 100.0f, 0.0f };
 
 void refresh(int value)
 {
@@ -526,7 +527,7 @@ void renderScene(void) {
 	glGetIntegerv(GL_VIEWPORT, m_viewport);
 
 	//viewer at origin looking down at  negative z direction
-	pushMatrix(MODEL);
+	/*pushMatrix(MODEL);
 	loadIdentity(MODEL);
 	pushMatrix(PROJECTION);
 	loadIdentity(PROJECTION);
@@ -538,6 +539,7 @@ void renderScene(void) {
 	popMatrix(PROJECTION);
 	popMatrix(VIEW);
 	popMatrix(MODEL);
+	*/
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 
@@ -596,6 +598,9 @@ void processKeys(unsigned char key, int xx, int yy)
 		break;
 	case 'h':
 		estaAcelerar = true;
+		break;
+	case 'f':
+		lightFlag = lightFlag % 1;
 		break;
 	}
 }
@@ -738,7 +743,7 @@ GLuint setupShaders() {
 	pvm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_pvm");
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
-	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos");
+	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos[0]");
 	tex_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap");
 	tex_loc1 = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
 	tex_loc2 = glGetUniformLocation(shader.getProgramIndex(), "texmap2");

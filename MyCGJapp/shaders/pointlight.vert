@@ -15,16 +15,17 @@ out Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
-} DataOut;
+} DataOut[6];
 
 void main () {
 
 	vec4 pos = m_viewModel * position;
-
-	DataOut.normal = normalize(m_normal * normal.xyz);
-	DataOut.lightDir = vec3(l_pos - pos);
-	DataOut.eye = vec3(-pos);
-	DataOut.tex_coord = texCoord.st;
+	for(int i = 0; i < 1; ++i){
+		DataOut[i].normal = normalize(m_normal * normal.xyz);
+		DataOut[i].lightDir = vec3(l_pos - pos);
+		DataOut[i].eye = vec3(-pos);
+		DataOut[i].tex_coord = texCoord.st;
+	}
 
 	gl_Position = m_pvm * position;	
 }
