@@ -44,7 +44,7 @@ using namespace std;
 
 #define CAPTION "CGJ Demo: Phong Shading and Text rendered with FreeType"
 int WindowHandle = 0;
-int WinX = 1024, WinY = 768;
+int WinX = 1024, WinY = 576;
 
 unsigned int FrameCount = 0;
 
@@ -402,7 +402,6 @@ void renderTorre() {
 			else if (objId == 1) {
 				float dif[] = { 0.36f, 0.73f, 0.89f, 1.0f };
 				glUniform4fv(loc, 1, dif);
-
 			}
 			else if (objId == 3 || objId == 4 || objId == 5 || objId == 6 || objId == 7 || objId == 8 || objId == 9 || objId == 10) {
 				float dif[] = { 0.97f, 0.98f, 0.98f, 1.0f };
@@ -494,6 +493,9 @@ void renderCity() {
 			if (i == 10 && j == 10) {
 				renderTorre();
 			}
+			else if (i > 8 && i < 12 && j > 8 && j < 12) {
+				continue;
+			}
 			else {
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
@@ -553,6 +555,13 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	glm::mat4 trans;
 	
 	trans = glm::mat4(1.0f);
+	trans = glm::rotate(trans, rotasaoCima, glm::vec3(rotasaoLado/360.0, 0.0, (360.0-rotasaoLado)/360.0));
+	newvert1 = trans * newvert1;
+	newvert2 = trans * newvert2;
+	newvert3 = trans * newvert3;
+	newvert4 = trans * newvert4;
+
+	trans = glm::mat4(1.0f);
 	trans = glm::rotate(trans, -rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
 	newvert1 = trans * newvert1;
 	newvert2 = trans * newvert2;
@@ -560,21 +569,11 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	newvert4 = trans * newvert4;
 
 	trans = glm::mat4(1.0f);
-	trans = glm::translate(trans, glm::vec3(posX, 0, posZ));
+	trans = glm::translate(trans, glm::vec3(posX, posY, posZ));
 	newvert1 = trans * newvert1;
 	newvert2 = trans * newvert2;
 	newvert3 = trans * newvert3;
 	newvert4 = trans * newvert4;
-	printf("Rot:  %f\n", rotasaoLado);
-
-	/*
-	trans = glm::mat4(1.0f);
-	trans = glm::rotate(trans, rotasaoCima, glm::vec3(0.0, 0.0, 1.0));
-	newvert1 = trans * newvert1;
-	newvert2 = trans * newvert2;
-	newvert3 = trans * newvert3;
-	newvert4 = trans * newvert4;*/
-
 
 	aabb->v1 = newvert1;
 	aabb->v2 = newvert2;
@@ -597,7 +596,7 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	aabb->br[2] = maxZ;
 
 	//printf("tlX:%f tlY:%f brX:%f brY:%f\n", aabb->tl[0], aabb->tl[2], aabb->br[0], aabb->br[2]);
-	/*
+	
 	glm::vec4 newvert1A = aabb->vert1A;
 	glm::vec4 newvert2A = aabb->vert2A;
 	glm::vec4 newvert3A = aabb->vert3A;
@@ -605,15 +604,14 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	glm::mat4 transA;
 
 	transA = glm::mat4(1.0f);
-	transA = glm::rotate(transA, rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
+	transA = glm::rotate(transA, rotasaoCima, glm::vec3(rotasaoLado / 360.0, 0.0, (360.0 - rotasaoLado) / 360.0));
 	newvert1A = transA * newvert1A;
 	newvert2A = transA * newvert2A;
 	newvert3A = transA * newvert3A;
 	newvert4A = transA * newvert4A;
 
-	
 	transA = glm::mat4(1.0f);
-	transA = glm::rotate(transA, rotasaoCima, glm::vec3(0.0, 0.0, 1.0));
+	transA = glm::rotate(transA, -rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
 	newvert1A = transA * newvert1A;
 	newvert2A = transA * newvert2A;
 	newvert3A = transA * newvert3A;
@@ -644,7 +642,7 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	aabb->tlA[0] = minXA;
 	aabb->tlA[2] = minZA;
 	aabb->brA[0] = maxXA;
-	aabb->brA[2] = maxZA;*/
+	aabb->brA[2] = maxZA;
 }
 
 // Car-butter/cheerio collision
@@ -656,8 +654,9 @@ bool checkCollisionBox(float a_xmin, float a_xmax, float a_zmin, float a_zmax, f
 bool checkaColisaoPredios(AABB* aabb) {
 	glm::vec4 v1 = aabb->v1;
 	glm::vec4 v2 = aabb->v2;
-	glm::vec4 v3 = aabb->v3;
 	glm::vec4 v4 = aabb->v4;
+	glm::vec4 v1A = aabb->v1A;
+	glm::vec4 v2A = aabb->v2A;
 	float CorpoY = posisaoY;
 
 	int predioX = 0;
@@ -666,13 +665,59 @@ bool checkaColisaoPredios(AABB* aabb) {
 	predioX = (int) floor(v1[0] / 48.0f);
 	predioZ = (int) floor(v1[2] / 48.0f);
 
-	printf("V1: %f, %f  V4: %f, %f\n", v1[0], v1[2], v4[0], v4[2]);
-
-
+	//printf("v1: %f, %f, %f  v4: %f, %f, %f", v1[0], v1[1], v1[2], v4[0], v4[1], v4[2]);
 	//printf("Altura do aviao: %f Altura do predio: %d\n", CorpoZ, alturaPredios[predioX][predioZ]);
 	//printf("%d\n", bateu);
 	if (((int)v1[0]) % 48 < 32 && ((int)v1[2]) % 48 < 32) {
-		if (CorpoY < alturaPredios[predioX][predioZ]) {
+		if (v1[1] < alturaPredios[predioX][predioZ]) {
+			return true;
+		}
+	}
+	else {
+		if (CorpoY < 0.0f) {
+			return true;
+		}
+	}
+
+	predioX = (int)floor(v2[0] / 48.0f);
+	predioZ = (int)floor(v2[2] / 48.0f);
+
+	// cabeso do aviao
+	if (((int)v2[0]) % 48 < 32 && ((int)v2[2]) % 48 < 32) {
+		if (v2[1] < alturaPredios[predioX][predioZ]) {
+			return true;
+		}
+	}
+	else {
+		if (CorpoY < 0.0f) {
+			return true;
+		}
+	}
+
+	predioX = (int)floor(v1A[0] / 48.0f);
+	predioZ = (int)floor(v1A[2] / 48.0f);
+
+	//printf("Asa1: %f, %f  Asa2: %f, %f", v1A[0], v1A[2], v2A[0], v2A[2]);
+	printf("%f\n", v1A[2]);
+	//asa do aviao
+	if (((int)v1A[0]) % 48 < 32 && ((int)v1A[2]) % 48 < 32) {
+		if (v1A[1] < alturaPredios[predioX][predioZ]) {
+			return true;
+		}
+	}
+	else {
+		if (CorpoY < 0.0f) {
+			return true;
+		}
+	}
+
+	predioX = (int)floor(v2A[0] / 48.0f);
+	predioZ = (int)floor(v2A[2] / 48.0f);
+
+	printf("%f\n", alturaPredios[predioX][predioZ]);
+	//asa do aviao
+	if (((int)v2A[0]) % 48 < 32 && ((int)v2A[2]) % 48 < 32) {
+		if (v2A[1] < alturaPredios[predioX][predioZ]) {
 			return true;
 		}
 	}
@@ -1213,7 +1258,12 @@ void init()
 
 	for (int i = 0; i < Q_PREDIOS; i++) {
 		for (int j = 0; j < Q_PREDIOS; j++) {
-			alturaPredios[i][j] = (rand() % 75) + 60;
+			if (i > 8 && i < 12 && j > 8 && j < 12) {
+				alturaPredios[i][j] = 0;
+			}
+			else {
+				alturaPredios[i][j] = (rand() % 75) + 25;
+			}
 		}
 	}
 	//ola

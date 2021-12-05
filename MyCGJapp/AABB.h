@@ -37,15 +37,15 @@ struct AABB {
 	
 	//Colliding box pas asas
 	
-	glm::vec4 v1A = glm::vec4(0.5f, 0.0f, -2.5f, 1.0f);
-	glm::vec4 v2A = glm::vec4(0.5f, 0.0f, 2.5f, 1.0f);
-	glm::vec4 v3A = glm::vec4(-0.5f, 0.0f, -2.5f, 1.0f);
-	glm::vec4 v4A = glm::vec4(-0.5f, 0.0f, 2.5f, 1.0f);
-
-	glm::vec4 vert1A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	glm::vec4 vert2A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	glm::vec4 vert3A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	glm::vec4 vert4A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 v1A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 v2A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 v3A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 v4A = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	glm::vec4 vert1A = glm::vec4(0.5f, 0.0f, -2.5f, 1.0f);
+	glm::vec4 vert2A = glm::vec4(0.5f, 0.0f, 2.5f, 1.0f);
+	glm::vec4 vert3A = glm::vec4(-0.5f, 0.0f, -2.5f, 1.0f);
+	glm::vec4 vert4A = glm::vec4(-0.5f, 0.0f, 2.5f, 1.0f);
 	glm::vec4 tlA = glm::vec4(0.5f, 0.0f, -2.5f, 1.0f); // top left = v1
 	glm::vec4 brA = glm::vec4(-0.5f, 0.0f, 2.5f, 1.0f); // bottom right = v4
 };
