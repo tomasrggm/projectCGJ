@@ -12,43 +12,68 @@ struct Materials {
 };
 
 uniform Materials mat;
-uniform int texMode;
-uniform sampler2D texmap;
+uniform int luzAmbiente;
+uniform int luzDifusa;
+uniform int luzHolofote;
+float l_spotCutOff = 0.99f;
+vec4 l_spotDir = vec4(0.0,0.0,-1.0,1.0);
+
 
 in Data {
 	vec3 normal;
 	vec3 eye;
 	vec3 lightDir;
-	vec2 tex_coord;
-} DataIn;
+} DataIn[9];
 
 void main() {
-	vec4 texel;
 
 	vec4 spec = vec4(0.0);
+	vec4 accum = vec4(0.0);
+	for(int i = 0; i < 9; i++){
+		if(i < 6){
+			vec3 n = normalize(DataIn[i].normal);
+			vec3 l = normalize(DataIn[i].lightDir);
+			vec3 e = normalize(DataIn[i].eye);
 
-	vec3 n = normalize(DataIn.normal);
-	vec3 l = normalize(DataIn.lightDir);
-	vec3 e = normalize(DataIn.eye);
-
-	float intensity = max(dot(n,l), 0.0);
+			float intensity = max(dot(n,l), 0.0);
 
 	
-	if (intensity > 0.0) {
+			if (intensity > 0.0) {
 
+				vec3 h = normalize(l + e);
+				float intSpec = max(dot(h,n), 0.0);
+				spec = mat.specular * pow(intSpec, mat.shininess);
+				accum += (intensity * mat.diffuse + spec) * luzDifusa;
+			}
+		}else if(i > 6){ //ignorar 6 que e a luz global
+			float intensity = 0.0;
+			vec4 spec = vec4(0.0);
+			vec3 ld = normalize(DataIn[i].lightDir);
+			vec3 sd = normalize(vec3(-l_spotDir));
+			if (dot(sd,ld) > l_spotCutOff) {
+				vec3 n = normalize(DataIn[i].normal);
+				intensity = max(dot(n,ld), 0.0);
+				if (intensity > 0.0) {
+					vec3 eye = normalize(DataIn[i].eye);
+					vec3 h = normalize(ld + eye);
+					float intSpec = max(dot(h,n), 0.0);
+					spec = mat.specular * pow(intSpec, mat.shininess);
+					accum += (spec + intensity*mat.diffuse) * luzHolofote;
+				}
+			}
+		}
+
+	}
+
+	vec3 n = normalize(DataIn[6].normal);
+	vec3 l = normalize(DataIn[6].lightDir);
+	vec3 e = normalize(DataIn[6].eye);
+
+	float intensity = max(dot(n,l), 0.0);
+	if (intensity > 0.0) {
 		vec3 h = normalize(l + e);
 		float intSpec = max(dot(h,n), 0.0);
 		spec = mat.specular * pow(intSpec, mat.shininess);
-	}
-	
-	//texturas
-	if (texMode == 1){
-			texel = texture(texmap, DataIn.tex_coord);  // texel from helice
-			if(texel.a == 0.0) discard;
-			else
-				colorOut = vec4(max(intensity*texel.rgb + spec.rgb, texel.rgb), texel.a);
-
-	}else{
-		colorOut = vec4(max(intensity * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
-	}
+		}
+	colorOut = max(accum, (spec + intensity*mat.diffuse) * luzAmbiente);
 }
