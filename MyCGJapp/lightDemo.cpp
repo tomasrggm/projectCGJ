@@ -91,6 +91,13 @@ float rotasaoLado = 0.0f;
 float rotacaoCima = 0.0f;
 float acelerasao = 0.0f;
 
+//variaveis criadas para os misseis
+int nMisseisAtivos = 0;
+#define N_MISSEIS_MAX 20
+float infoMisseis[N_MISSEIS_MAX][5];
+int missilIndex;
+
+//variaveis criadas para a camera
 float atrasoCamera[20][3];
 int posIndex = 0;
 int camIndex = 1;
@@ -490,8 +497,15 @@ void renderCity() {
 	for (int i = 0; i < Q_PREDIOS; i++) {
 		for (int j = 0; j < Q_PREDIOS; j++) {
 
-			if (i == 10 && j == 10) {
-				renderTorre();
+			if ((i == 10 && j == 10) || (i == 2 && j == 12) || (i == 2 && j == 13) || (i == 3 && j == 12) || (i == 3 && j == 13) || (i == 4 && j == 20)
+				|| (i == 5 && j == 19) || (i == 6 && j == 18) || (i == 7 && j == 17) || (i == 8 && j == 16) || (i == 9 && j == 7)
+				|| (i == 10 && j == 6) || (i == 11 && j == 5) || (i == 17 && j == 16) || (i == 8 && j == 0) || (i == 9 && j == 1) || (i == 10 && j == 2)
+				|| (i == 11 && j == 3) || (i == 12 && j == 4) || (i == 13 && j == 5) || (i == 14 && j == 6) || (i == 15 && j == 7) || (i == 16 && j == 8)
+				|| (i == 17 && j == 9) || (i == 18 && j == 10) || (i == 19 && j == 11) || (i == 20 && j == 12) || (i == 9 && j == 0) || (i == 10 && j == 1)
+				|| (i == 11 && j == 2) || (i == 12 && j == 3) || (i == 13 && j == 4) || (i == 14 && j == 5) || (i == 15 && j == 6) || (i == 16 && j == 7)
+				|| (i == 17 && j == 8) || (i == 18 && j == 9) || (i == 19 && j == 10) || (i == 20 && j == 11)) {
+				alturaPredios[i][j] = 0;
+				continue;
 			}
 			else if (i > 8 && i < 12 && j > 8 && j < 12) {
 				continue;
@@ -514,6 +528,172 @@ void renderCity() {
 				drawMesh(4);
 
 				popMatrix(MODEL);
+
+				//passeio (wip)
+
+				// send the material
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+				glUniform4fv(loc, 1, myMeshes[4].mat.diffuse);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+				glUniform4fv(loc, 1, myMeshes[4].mat.specular);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+				glUniform1f(loc, myMeshes[4].mat.shininess);
+				pushMatrix(MODEL);
+
+				translate(MODEL, i * 48-2, 0, j * 48-2);
+				scale(MODEL, comprimentoPredio+4, 0.95f, larguraPredio+4);
+
+				drawMesh(4);
+
+				popMatrix(MODEL);
+			}
+		}
+	}
+}
+
+void renderChao() {
+
+	GLint loc;
+	int objId = 0;
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 6; ++j) {
+			int use = 4;
+			glUniform1i(texMode_uniformId, 0);
+			if (objId > 11) {
+				objId++;
+				continue;
+			}
+
+			// send the material
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+			glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+			glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+			glUniform1f(loc, myMeshes[use].mat.shininess);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+
+			if (objId == 0) {
+				float dif[] = { 0.36f, 0.73f, 0.89f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+
+			}
+			else if (objId == 1) {
+				float dif[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+
+			}
+			else if (objId == 2 || objId == 3) {
+				float dif[] = { 0.2f, 0.66f, 0.32f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+
+			}
+			else if (objId > 3) {
+				float dif[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+				glUniform4fv(loc, 1, dif);
+			}
+			else {
+				glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+			}
+
+			pushMatrix(MODEL);
+
+			if (objId == 0) { //agua
+				translate(MODEL, 0.0f, -5.0f, -32.0f);
+				scale(MODEL, 992.0f, 5.0f, 1090.0f);
+			}
+			else if (objId == 1) { //linha combojo
+				translate(MODEL, 81.0f, 0.0f, -16.0f);
+				scale(MODEL, 14.0f, 1.1f, 1074.0f);
+			}
+			else if (objId == 2) { //parque
+				translate(MODEL, 96.0f, 0.0f, 576.0f);
+				scale(MODEL, 80.0f, 1.1f, 80.0f);
+			}
+			else if (objId == 3) { //parque cima
+				translate(MODEL, 816.0f, 0.0f, 768.0f);
+				scale(MODEL, 32.0f, 1.1f, 32.0f);
+			}
+			else if (objId == 4) {
+				translate(MODEL, -2, 0, -2);
+				scale(MODEL, 372.0f, 1.0f, 336.0f);
+			}
+			else if (objId == 5) {
+				translate(MODEL, -2.0f, 0.0f, 334.0f);
+				scale(MODEL, 420.0f, 1.0f, 324.0f);
+			}
+			else if (objId == 6) {
+				translate(MODEL, -2, 0.0, 670);
+				scale(MODEL, 180.0f, 1.0f, 324.0f);
+			}
+			else if (objId == 7) {
+				translate(MODEL, 430, 0.0, 382);
+				scale(MODEL, 324.0f, 1.0f, 288.0f);
+			}
+			else if (objId == 8) {
+				translate(MODEL, 430, 0.0, 622);
+				scale(MODEL, 564.0f, 1.0f, 372.0f);
+			}
+			else if (objId == 9) {
+				translate(MODEL, 430, 0.0, 382);
+				rotate(MODEL, 45, 0, 1, 0);
+				scale(MODEL, 229.1f, 1.0f, 568.5f);
+			}
+			else if (objId == 10) {
+				translate(MODEL, 442, 0.0, -2);
+				rotate(MODEL, 45, 0, 1, 0);
+				scale(MODEL, 390.25f, 1.0f, 780.5f);
+			}
+			else if (objId == 11) {
+				translate(MODEL, 370, 0.0, -2);
+				rotate(MODEL, -45, 0, 1, 0);
+				scale(MODEL, 297.0f, 1.0f, 297.0f);
+			}
+
+			drawMesh(use);
+			popMatrix(MODEL);
+			objId++;
+
+			glDisable(GL_BLEND);
+			glDepthMask(GL_TRUE);
+		}
+	}
+}
+
+void updateMisseis() {
+	if (nMisseisAtivos > 0) {
+		GLint loc;
+		for (int i = 0; i < N_MISSEIS_MAX; i++) {
+			if (infoMisseis[i][0] != 0.0f) {
+				// send the material
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+				glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+				glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+				glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+				glUniform1f(loc, myMeshes[3].mat.shininess);
+				pushMatrix(MODEL);
+
+				translate(MODEL, infoMisseis[i][2], infoMisseis[i][3], infoMisseis[i][4]);
+				rotate(MODEL, -infoMisseis[i][0], 0, 1, 0);
+				rotate(MODEL, infoMisseis[i][1], 0, 0, 1);
+				translate(MODEL, 0.0f, -0.75f, 0.0f);
+				scale(MODEL, 2.0f, 0.5f, 0.5f);
+				rotate(MODEL, 90, 0, 0, 1);
+
+				drawMesh(3);
+
+				popMatrix(MODEL);
+
+				//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
+
+				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180);
+				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180);
+				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180);
 			}
 		}
 	}
@@ -668,7 +848,7 @@ bool checkaColisaoPredios(AABB* aabb) {
 	//printf("v1: %f, %f, %f  v4: %f, %f, %f", v1[0], v1[1], v1[2], v4[0], v4[1], v4[2]);
 	//printf("Altura do aviao: %f Altura do predio: %d\n", CorpoZ, alturaPredios[predioX][predioZ]);
 	//printf("%d\n", bateu);
-	if (((int)v1[0]) % 48 < 32 && ((int)v1[2]) % 48 < 32) {
+	if (((int)v1[0]) % 48 < 32 && ((int)v1[2]) % 48 < 32 && predioX < Q_PREDIOS && predioZ < Q_PREDIOS && predioX >= 0 && predioZ >= 0) {
 		if (v1[1] < alturaPredios[predioX][predioZ]) {
 			return true;
 		}
@@ -683,7 +863,7 @@ bool checkaColisaoPredios(AABB* aabb) {
 	predioZ = (int)floor(v2[2] / 48.0f);
 
 	// cabeso do aviao
-	if (((int)v2[0]) % 48 < 32 && ((int)v2[2]) % 48 < 32) {
+	if (((int)v2[0]) % 48 < 32 && ((int)v2[2]) % 48 < 32 && predioX < Q_PREDIOS && predioZ < Q_PREDIOS && predioX >= 0 && predioZ >= 0) {
 		if (v2[1] < alturaPredios[predioX][predioZ]) {
 			return true;
 		}
@@ -698,9 +878,9 @@ bool checkaColisaoPredios(AABB* aabb) {
 	predioZ = (int)floor(v1A[2] / 48.0f);
 
 	//printf("Asa1: %f, %f  Asa2: %f, %f", v1A[0], v1A[2], v2A[0], v2A[2]);
-	printf("%f\n", v1A[2]);
+	//printf("%f\n", v1A[2]);
 	//asa do aviao
-	if (((int)v1A[0]) % 48 < 32 && ((int)v1A[2]) % 48 < 32) {
+	if (((int)v1A[0]) % 48 < 32 && ((int)v1A[2]) % 48 < 32 && predioX < Q_PREDIOS && predioZ < Q_PREDIOS && predioX >= 0 && predioZ >= 0) {
 		if (v1A[1] < alturaPredios[predioX][predioZ]) {
 			return true;
 		}
@@ -714,9 +894,9 @@ bool checkaColisaoPredios(AABB* aabb) {
 	predioX = (int)floor(v2A[0] / 48.0f);
 	predioZ = (int)floor(v2A[2] / 48.0f);
 
-	printf("%f\n", alturaPredios[predioX][predioZ]);
+	//printf("%f\n", alturaPredios[predioX][predioZ]);
 	//asa do aviao
-	if (((int)v2A[0]) % 48 < 32 && ((int)v2A[2]) % 48 < 32) {
+	if (((int)v2A[0]) % 48 < 32 && ((int)v2A[2]) % 48 < 32 && predioX < Q_PREDIOS && predioZ < Q_PREDIOS && predioX >= 0 && predioZ >= 0) {
 		if (v2A[1] < alturaPredios[predioX][predioZ]) {
 			return true;
 		}
@@ -828,15 +1008,14 @@ void renderScene(void) {
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
 	case 1:
-		/*
 		//camera de cima orto
-		lookAt(38.0, 30.0, 68.0, 38.0, 0.0, 68.0, 1, 0, 0);
+		lookAt(496.0, 1, 496.0, 496.0, 0.0, 496.0, 1, 0, 0);
 		loadIdentity(PROJECTION);
-		ortho(-640 * ratio / 40, 640 * ratio / 40, -640 / 40, 640 / 40, -100, 100);*/
+		ortho(-504 * ratio, 504 * ratio, -504, 504, -1000, 1000);
 		break;
 	case 2:
 		//camera de cima perspetiva
-		lookAt(-3.0, 125.0f, 0.0f, 38.0, 0.0, 68.0, 1, 0, 0);
+		lookAt(496.0, 400.0, 496.0, 496.0, 0.0, 496.0, 1, 0, 0);
 		loadIdentity(PROJECTION);
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
@@ -897,11 +1076,15 @@ void renderScene(void) {
 
 	applyRotation();
 
+	renderChao();
+
 	renderAviao();
 
 	renderCity();
 
 	renderTorre();
+
+	updateMisseis();
 
 	handleCollisions();
 	
@@ -969,12 +1152,26 @@ void processKeys(unsigned char key, int xx, int yy)
 	case 'h':
 		estaAcelerar = true;
 		break;
-	case '3':
-		camera = 3;
-		break;
 	case '0':
 		camera = 0;
 		break;
+	case '1':
+		camera = 1;
+		break;
+	case '2':
+		camera = 2;
+		break;
+	case '3':
+		camera = 3;
+		break;
+	case 32: //espaso
+		infoMisseis[missilIndex][0] = rotasaoLado + 0.0f;
+		infoMisseis[missilIndex][1] = rotacaoCima + 0.0f;
+		infoMisseis[missilIndex][2] = posisaoX + 0.0f;
+		infoMisseis[missilIndex][3] = posisaoY + 0.0f;
+		infoMisseis[missilIndex][4] = posisaoZ + 0.0f;
+		missilIndex = (missilIndex + 1) % N_MISSEIS_MAX;
+		nMisseisAtivos += 1;
 	}
 }
 
