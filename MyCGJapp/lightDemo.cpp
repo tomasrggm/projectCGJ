@@ -557,11 +557,11 @@ void renderChao() {
 
 	GLint loc;
 	int objId = 0;
-	for (int i = 0; i < 2; ++i) {
-		for (int j = 0; j < 6; ++j) {
-			int use = 4;
+	int use = 4;
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 10; j++) {
 			glUniform1i(texMode_uniformId, 0);
-			if (objId > 11) {
+			if (objId > 18) {
 				objId++;
 				continue;
 			}
@@ -601,8 +601,8 @@ void renderChao() {
 			pushMatrix(MODEL);
 
 			if (objId == 0) { //agua
-				translate(MODEL, 0.0f, -5.0f, -32.0f);
-				scale(MODEL, 992.0f, 5.0f, 1090.0f);
+				translate(MODEL, -16.0f, -5.0f, -16.0f);
+				scale(MODEL, 1024.0f, 5.0f, 1024.0f);
 			}
 			else if (objId == 1) { //linha combojo
 				translate(MODEL, 81.0f, 0.0f, -16.0f);
@@ -637,19 +637,49 @@ void renderChao() {
 				scale(MODEL, 564.0f, 1.0f, 372.0f);
 			}
 			else if (objId == 9) {
-				translate(MODEL, 430, 0.0, 382);
+				translate(MODEL, 430.0f, 0.0f, 382.0f);
 				rotate(MODEL, 45, 0, 1, 0);
 				scale(MODEL, 229.1f, 1.0f, 568.5f);
 			}
 			else if (objId == 10) {
-				translate(MODEL, 442, 0.0, -2);
+				translate(MODEL, 442.0f, 0.0f, -2.0f);
 				rotate(MODEL, 45, 0, 1, 0);
 				scale(MODEL, 390.25f, 1.0f, 780.5f);
 			}
 			else if (objId == 11) {
-				translate(MODEL, 370, 0.0, -2);
+				translate(MODEL, 370.0f, 0.0f, -2.0f);
 				rotate(MODEL, -45, 0, 1, 0);
 				scale(MODEL, 297.0f, 1.0f, 297.0f);
+			}
+			else if (objId == 12) {
+				translate(MODEL, 190.0f, 0.0f, 670.0f);
+				scale(MODEL, 228.0f, 1.0f, 84.0f);
+			}
+			else if (objId == 13) {
+				translate(MODEL, 418.0, 0.0f, 754.0f);
+				rotate(MODEL, -135, 0, 1, 0);
+				scale(MODEL, 339.41f, 1.0f, 120.0f);
+			}
+			else if (objId == 14) {
+				translate(MODEL, 178.0f, 0.0f, 670.0f);
+				scale(MODEL, 150.0f, 1.0f, 154.0f);
+			}
+			else if (objId == 15) {
+				translate(MODEL, 441.0f , 0.0f, 776.0f);
+				rotate(MODEL, -135, 0, 1, 0);
+				scale(MODEL, 325.0f, 1.0f, 15.0f);
+			}
+			else if (objId == 16) {
+				translate(MODEL, -2.0f, 0.0f, 994.0f);
+				scale(MODEL, 180.0f, 1.0f, 14.21f);
+			}
+			else if (objId == 17) {
+				translate(MODEL, 200.58f, 0.0f, 995.21f);
+				scale(MODEL, 793.42f, 1.0f, 13.0f);
+			}
+			else if (objId == 18) {
+				translate(MODEL, 205.58f, 0.0f, 990.21f);
+				scale(MODEL, 788.42f, 1.0f, 13.0f);
 			}
 
 			drawMesh(use);
@@ -659,6 +689,30 @@ void renderChao() {
 			glDisable(GL_BLEND);
 			glDepthMask(GL_TRUE);
 		}
+	}
+	for (int k = 0; k < 50; k++) {
+		// send the material
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+		glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+		glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+		glUniform1f(loc, myMeshes[use].mat.shininess);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+		float dif[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+		glUniform4fv(loc, 1, dif);
+
+		pushMatrix(MODEL);
+
+		translate(MODEL, 430.0f, 0.0f, 974.0f - k * 4.0f);
+		rotate(MODEL, -90, 0, 1, 0);
+		scale(MODEL, 20.0f, 1.0f, 208.0f - k * 4.0f);
+
+		drawMesh(use);
+		popMatrix(MODEL);
+
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
 	}
 }
 
@@ -1001,7 +1055,7 @@ void renderScene(void) {
 			dirCamera = -1;
 		}
 		// camera movel com motion sickness
-		lookAt(atrasoCamera[camIndex][0] - (10 * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * cos(rotasaoLado * PI / 180), atrasoCamera[camIndex][1] - 10 * sin((rotacaoCima)*PI / 180) + 5 * cos(-rotacaoCima * PI / 180), atrasoCamera[camIndex][2] - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), atrasoCamera[camIndex][0], atrasoCamera[camIndex][1], atrasoCamera[camIndex][2], 0, 1 * dirCamera, 0);
+		lookAt(atrasoCamera[camIndex][0] - (10 * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * cos(rotasaoLado * PI / 180), atrasoCamera[camIndex][1] - 10 * sin((rotacaoCima)*PI / 180) + 5 * cos(-rotacaoCima * PI / 180), atrasoCamera[camIndex][2] - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1 * dirCamera, 0);
 		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
 		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
