@@ -73,6 +73,7 @@ GLint vm_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint tex_loc, tex_loc1, tex_loc2;
+GLint fogF;
 
 GLuint TextureArray[1];
 
@@ -108,7 +109,7 @@ int camera = 3;
 int alturaPredios[Q_PREDIOS][Q_PREDIOS];
 int larguraPredio = 32;
 int comprimentoPredio = 32;
-
+int fogFlag = 0;
 //bounding boxes do aviao
 AABB aabb;
 bool bateu = false;
@@ -1026,7 +1027,7 @@ void renderScene(void) {
 			acelerasao -= 0.02f;
 		}
 	}
-	
+	glUniform1i(fogF,fogFlag);
 	//atualizar o buffer circular (atraso da camera)
 	camIndex = (camIndex + 1) % 20;
 
@@ -1218,6 +1219,9 @@ void processKeys(unsigned char key, int xx, int yy)
 	case '3':
 		camera = 3;
 		break;
+	case 'f':
+		if (fogFlag == 0) fogFlag = 1; else fogFlag = 0;
+		break;
 	case 32: //espaso
 		infoMisseis[missilIndex][0] = rotasaoLado + 0.0f;
 		infoMisseis[missilIndex][1] = rotacaoCima + 0.0f;
@@ -1371,6 +1375,7 @@ GLuint setupShaders() {
 	tex_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap");
 	tex_loc1 = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
 	tex_loc2 = glGetUniformLocation(shader.getProgramIndex(), "texmap2");
+	fogF = glGetUniformLocation(shader.getProgramIndex(), "fogFlag");
 	
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 

@@ -14,6 +14,9 @@ struct Materials {
 uniform Materials mat;
 uniform int texMode;
 uniform sampler2D texmap;
+uniform int fogFlag;
+in vec4 pos;
+const float density = 0.01;
 
 in Data {
 	vec3 normal;
@@ -51,4 +54,14 @@ void main() {
 	}else{
 		colorOut = vec4(max(intensity * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 	}
+
+	//seccao do fog
+	vec3 fogColor = vec3(0.5,0.6,0.7);
+	float distance = length(pos);
+	float visibility = exp(-distance*density);
+	colorOut[3] = mat.diffuse.a; 
+	if(fogFlag == 0){
+		colorOut = mix(vec4(fogColor,1.0), colorOut, visibility);
+	}
+	
 }
