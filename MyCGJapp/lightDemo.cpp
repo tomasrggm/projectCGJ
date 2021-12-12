@@ -82,6 +82,9 @@ GLint luzBofia_loc;
 
 GLuint TextureArray[10];
 
+//Variaveis fun mode
+bool minigame = false;
+
 // Variaveis criadas para o aviao
 float rotPlaneH;
 float rotPlaneV;
@@ -836,24 +839,25 @@ void renderCity() {
 
 				popMatrix(MODEL);
 
-				/* POSSIVEL TETO DO PREDIO (IMPORTANTE)
+				//POSSIVEL TETO DO PREDIO (IMPORTANTE)
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
+				glUniform4fv(loc, 1, myMeshes[5].mat.ambient);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-				glUniform4fv(loc, 1, myMeshes[4].mat.diffuse);
+				glUniform4fv(loc, 1, myMeshes[5].mat.diffuse);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-				glUniform4fv(loc, 1, myMeshes[4].mat.specular);
+				glUniform4fv(loc, 1, myMeshes[5].mat.specular);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-				glUniform1f(loc, myMeshes[4].mat.shininess);
+				glUniform1f(loc, myMeshes[5].mat.shininess);
 				pushMatrix(MODEL);
 
-				translate(MODEL, i * 48-2, alturaPredios[i][j], j * 48-2);
-				scale(MODEL, comprimentoPredio+4, 0.95f, larguraPredio+4);
+				translate(MODEL, i * 48+16, alturaPredios[i][j] + 0.4, j * 48+16);
+				rotate(MODEL, -90, 1, 0, 0);
+				scale(MODEL, 32.0, 32.0f, 1.0);
 
-				drawMesh(4);
+				drawMesh(5);
 
-				popMatrix(MODEL);*/
+				popMatrix(MODEL);
 			}
 		}
 	}
@@ -1847,39 +1851,6 @@ void renderScene(void) {
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
-	//Associar os Texture Units aos Objects Texture
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[5]);
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[6]);
-	glActiveTexture(GL_TEXTURE7);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[7]);
-	glActiveTexture(GL_TEXTURE8);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[8]);
-	glActiveTexture(GL_TEXTURE9);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[9]);
-	//Indicar aos samplers do GLSL quais os Texture Units a serem usados
-	glUniform1i(tex_loc, 0);
-	glUniform1i(tex_loc1, 1);
-	glUniform1i(tex_loc2, 2);
-	glUniform1i(tex_loc3, 3);
-	glUniform1i(tex_loc4, 4);
-	glUniform1i(tex_loc5, 5);
-	glUniform1i(tex_loc6, 6);
-	glUniform1i(tex_loc7, 7);
-	glUniform1i(tex_loc8, 8);
-	glUniform1i(tex_loc9, 9);
-
 
 	float ratio = (float)WinX / WinY;
 	int dirCamera = 1;
@@ -1907,8 +1878,20 @@ void renderScene(void) {
 		lookAt(496.0, 400.0, 496.0, 496.0, 0.0, 496.0, 1, 0, 0);
 		loadIdentity(PROJECTION);
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
+		if (!minigame) {
+		rotasaoCima = 0.0f;
+		rotasaoCimaUm = 0.0f;
+		rotasaoCimaDois = 0.0f;
+		rotasaoCimaTres = 0.0f;
+		posisaoY = 200.0f;
+		posisaoYUm = 200.0f;
+		posisaoYDois = 200.0f;
+		posisaoYTres = 200.0f;
+		minigame = true;
+		}
 		break;
 	case 3:
+		minigame = false;
 		if (rotasaoCima <= 295.5f && rotasaoCima > 115.5f){
 			dirCamera = -1;
 		}
@@ -1954,6 +1937,19 @@ void renderScene(void) {
 	}
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
+
+	//Indicar aos samplers do GLSL quais os Texture Units a serem usados
+
+	glUniform1i(tex_loc, 0);
+	glUniform1i(tex_loc1, 1);
+	glUniform1i(tex_loc2, 2);
+	glUniform1i(tex_loc3, 3);
+	glUniform1i(tex_loc4, 4);
+	glUniform1i(tex_loc5, 5);
+	glUniform1i(tex_loc6, 6);
+	glUniform1i(tex_loc7, 7);
+	glUniform1i(tex_loc8, 8);
+	glUniform1i(tex_loc9, 9);
 
 		//send the light position in eye coordinates
 		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
@@ -2405,6 +2401,28 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/lidl.jpg", 7);
 	Texture2D_Loader(TextureArray, "textures/beer.jpg", 8);
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
+
+	//Associar os Texture Units aos Objects Texture
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[1]);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[2]);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[3]);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[4]);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[5]);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[6]);
+	glActiveTexture(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[7]);
+	glActiveTexture(GL_TEXTURE8);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[8]);
+	glActiveTexture(GL_TEXTURE9);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[9]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
