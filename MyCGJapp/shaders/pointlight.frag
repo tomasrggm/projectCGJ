@@ -27,6 +27,7 @@ uniform sampler2D texmap9;
 uniform int pointLights;
 uniform vec4 corVariavel;
 uniform int dia;
+uniform int luzBofia;
 
 in vec3 lLocalDir1;
 in vec3 lLocalDir2;
@@ -40,6 +41,7 @@ in vec3 lLocalDir9;
 in vec3 lLocalDir10;
 in vec3 lLocalDir11;
 in vec3 lLocalDir12;
+in vec3 lLocalDir13;
 
 uniform int fogFlag;
 in vec4 pos;
@@ -188,6 +190,23 @@ void main() {
 			spec += (mat.specular * pow(intSpec, mat.shininess)) * attenuation;
 			attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
 			resultado += branco * intensity * attenuation;
+
+			if(dia == 0){
+				dist = length(lLocalDir13);
+				l = normalize(lLocalDir13);
+				intensity = max(dot(n,l), 0.0);
+				h = normalize(l + e);
+				intSpec = max(dot(h,n), 0.0);
+				spec += (mat.specular * pow(intSpec, mat.shininess)) * attenuation;
+				attenuation = 1.0 / (1.0 + 0.0014 * dist + 0.00001 * (dist * dist));
+				if(luzBofia == 0){
+					//resultado += vec4(1.0, 0.75, 0.0, 1.0) * intensity * attenuation ;
+					resultado += vec4(1.0, 0.0, 0.0, 1.0) * intensity * attenuation ;
+				}else{
+					resultado += vec4(0.0, 0.0, 1.0, 1.0) * intensity * attenuation ;
+				}
+				
+			}
 	}
 
 	//texturas
@@ -229,7 +248,21 @@ void main() {
 	}else if(texMode == 9){//sign
 			texel = texture(texmap9, DataIn.tex_coord);  // texel from lidl
 			texel1 = texture(texmap2, DataIn.tex_coord);  // texel from lines
-			colorOut =  vec4(max(resultado.rgb*texel.rgb*texel1.rgb + spec.rgb,  mat.ambient.rgb  + 0.1*texel.rgb*texel.rgb), 1.0);			
+			colorOut =  vec4(max(resultado.rgb*texel.rgb*texel1.rgb + spec.rgb,  mat.ambient.rgb  + 0.1*texel.rgb*texel.rgb), 1.0);		
+	}else if(texMode == 10){//balas
+			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			if(dia == 1){
+				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
+			}else{
+				colorOut = vec4(1.0,0.02,0.95,1.0);
+			}
+	}else if(texMode == 11){//balas
+			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			if(dia == 1){
+				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
+			}else{
+				colorOut = vec4(1.0,0.9,0.95,1.0);
+			}
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);

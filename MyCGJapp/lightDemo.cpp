@@ -74,10 +74,11 @@ GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
 GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9;
-GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc;
+GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc;
 GLint dia;
 GLint pointLights;
 GLint corVariavel_loc;
+GLint luzBofia_loc;
 
 GLuint TextureArray[10];
 
@@ -93,9 +94,28 @@ float posisaoX = 0.0f;
 float posisaoY = 125.0f;
 float posisaoZ = 0.0f;
 float rotasaoLado = 0.0f;
-float rotacaoCima = 0.0f;
+float rotasaoCima = 0.0f;
 float acelerasao = 0.0f;
 bool paraAviao = false;
+
+//variaveis para os avioes inimigos
+float posisaoXUm = posisaoX;
+float posisaoYUm = posisaoY;
+float posisaoZUm = posisaoZ;
+float rotasaoLadoUm = 0.0f;
+float rotasaoCimaUm = 0.0f;
+
+float posisaoXDois = posisaoX;
+float posisaoYDois = posisaoY;
+float posisaoZDois = posisaoZ;
+float rotasaoLadoDois = 0.0f;
+float rotasaoCimaDois = 0.0f;
+
+float posisaoXTres = posisaoX;
+float posisaoYTres = posisaoY;
+float posisaoZTres = posisaoZ;
+float rotasaoLadoTres = 0.0f;
+float rotasaoCimaTres = 0.0f;
 
 //variaveis criadas para a spotLight
 float spotLights[4] = { 0.0f,0.0f,0.0f, 1.0f};
@@ -107,13 +127,22 @@ GLint spotDirection;
 int nMisseisAtivos = 0;
 #define N_MISSEIS_MAX 20
 float infoMisseis[N_MISSEIS_MAX][5];
+float infoMisseisUm[N_MISSEIS_MAX][5];
+float infoMisseisDois[N_MISSEIS_MAX][5];
+float infoMisseisTres[N_MISSEIS_MAX][5];
 int missilIndex;
+int missilIndexUm;
+int missilIndexDois;
+int missilIndexTres;
+int missilTimer;
 
 //variaveis criadas para a camera
 float atrasoCamera[20][3];
 int posIndex = 0;
 int camIndex = 1;
 int camera = 3;
+float rotLCam = 0.0f;
+float rotCCam = 0.0f;
 
 // Variaveis criadas para a cidade
 #define Q_PREDIOS 21
@@ -121,12 +150,16 @@ int alturaPredios[Q_PREDIOS][Q_PREDIOS];
 int larguraPredio = 32;
 int comprimentoPredio = 32;
 int fogFlag = 0;
+
 //bounding boxes do aviao
 AABB aabb;
 bool bateu = false;
+AABB aabbUm;
+AABB aabbDois;
+AABB aabbTres;
 
 int diaLigado = 1;
-int pointLightsLigadas = 1;
+int pointLightsLigadas = 0;
 int rotasaoLampada = 0;
 
 // Definicoes criadas
@@ -146,7 +179,7 @@ float r = 10.0f;
 long myTime,timebase = 0,frame = 0;
 char s[32];
 float lightPos[4] = {496.0f, 400.0f, 496.0f, 0.0f};
-float luzesLocais[12][4] = { {504.66f, 205.0f, 501.00f, 1.0},
+float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{504.66f, 205.0f, 491.00f, 1.0},
 							{496.00f, 205.0f, 485.50f, 1.0},
 							{487.00f, 205.0f, 490.50f, 1.0},
@@ -157,15 +190,31 @@ float luzesLocais[12][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{496.0f, 130.0f, 490.50f, 1.0},
 							{496.0f, 130.0f, 505.0f, 1.0},
 							{496.0f, 130.0f, 485.0f, 1.0},
-							{496.0f, 130.0f, 496.0f, 1.0} };
-float corLuz[4] = { 1.0f, 0.0f, 1.0f };
+							{496.0f, 130.0f, 496.0f, 1.0},
+							//{120.0f, 3.0f, 120.0f, 1.0} 
+							{88.0f, 3.0f, 88.0f, 1.0}
+							};
+int contadorBofia = 0;
+int luzBofia = 0;
+float corLuz[4] = { 1.0f, 0.0f, 1.0f , 1.0};
 int luzIndice = 0;
 int mudaLuz = -1;
 
-#define N_SIGNS 40
+//signs
+#define N_SIGNS 50
 int signsX[N_SIGNS];
 int signsZ[N_SIGNS];
 int signTypes[N_SIGNS];
+int temSign[Q_PREDIOS][Q_PREDIOS];
+int orientasao[N_SIGNS];
+
+//aros de velocidade
+#define N_AROS 50
+int arosX[N_AROS];
+int arosZ[N_AROS];
+int aroTypes[N_AROS];
+int alturaAro[N_AROS];
+
 
 void refresh(int value)
 {
@@ -249,47 +298,98 @@ void renderTexto() {
 	glDisable(GL_BLEND);
 }
 
-void applyRotation() {
-	if (o) {
-		rotasaoLado -= 1.5f;
+void carroDaBofia() {
+	if (luzesLocais[12][0] < 904.0f && luzesLocais[12][2] <= 88.0f) {
+		luzesLocais[12][0] += 2.0f;
 	}
-
-	if (o && rotPlaneH > -45.0f) {
-		rotPlaneH -= 1.5f;
+	else if (luzesLocais[12][0] >= 904.0f && luzesLocais[12][2] < 904.0f) {
+		luzesLocais[12][2] += 2.0f;
 	}
-	if (p) {
-		rotasaoLado += 1.5f;
+	else if (luzesLocais[12][2] >= 904.0f && luzesLocais[12][0] >= 88.0f) {
+		luzesLocais[12][0] -= 2.0f;
 	}
-	if (p && rotPlaneH < 45.0f) {
-		rotPlaneH += 1.5f;
-	}
-	if (q) {
-		rotacaoCima -= 1.5f;
-	}
-	if (q && rotPlaneV > -15.0f) {
-		rotPlaneV -= 1.0f;
-	}
-	if (a) {
-		rotacaoCima += 1.5f;
-	}
-	if (a && rotPlaneV < 15.0f) {
-		rotPlaneV += 1.0f;
-	}
-	if (rotacaoCima > 360.0f) {
-		rotacaoCima = 0.0f;
-	}
-	if (rotacaoCima < 0) {
-		rotacaoCima = 360.0f;
+	else {
+		luzesLocais[12][2] -= 2.0f;
 	}
 }
 
-void renderAviao() {
+void respawnaAviao() {
+	if (posisaoX < 0.0f) {
+		posisaoX = 1008.0f;
+	}
+	else if (posisaoX > 1008.0f) {
+		posisaoX = 0.0f;
+	}
+	if (posisaoZ < 0.0f) {
+		posisaoZ = 1008.0f;
+	}
+	else if (posisaoZ > 1008.0f) {
+		posisaoZ = 0.0f;
+	}
+
+}
+
+void applyRotation() {
+	if (o) {
+		/*if (!bateu) {*/
+			rotasaoLado -= 1.5f;
+		//}
+		//else {
+		//	rotLCam -= 1.5f;
+		//}
+	}
+
+	if (o && rotPlaneH > -45.0f && !bateu) {
+		rotPlaneH -= 1.5f;
+	}
+	if (p) {
+		/*if (!bateu) {*/
+			rotasaoLado += 1.5f;
+	/*	}
+		else {
+			rotLCam += 1.5f;
+		}*/
+	}
+	if (p && rotPlaneH < 45.0f && !bateu) {
+		rotPlaneH += 1.5f;
+	}
+	if (q) {
+	/*	if (!bateu) {*/
+			rotasaoCima -= 1.5f;
+	/*	}
+		else {
+			rotCCam -= 1.5f;
+		}*/
+	}
+	if (q && rotPlaneV > -15.0f && !bateu) {
+		rotPlaneV -= 1.0f;
+	}
+	if (a) {
+	/*	if (!bateu) {*/
+			rotasaoCima += 1.5f;
+	/*	}
+		else {
+			rotCCam += 1.5f;
+		}*/
+	}
+	if (a && rotPlaneV < 15.0f && !bateu) {
+		rotPlaneV += 1.0f;
+	}
+	if (rotasaoCima > 360.0f) {
+		rotasaoCima = 0.0f;
+	}
+	if (rotasaoCima < 0) {
+		rotasaoCima = 360.0f;
+	}
+}
+
+void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCima, float rotasaoLado, float rotPlaneV, float rotPlaneH) {
 	int objId = 0;
 	GLint loc;
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 4; ++j) {
 			int use = 0;
-			glUniform1i(texMode_uniformId, 0);
+			glUniform1i(texMode_uniformId, 11);
 
 			if (objId > 7)
 				continue;
@@ -330,7 +430,7 @@ void renderAviao() {
 			if (objId < 8) {
 				translate(MODEL, posisaoX, posisaoY, posisaoZ);
 				rotate(MODEL, -rotasaoLado, 0, 1, 0);
-				rotate(MODEL, rotacaoCima, 0, 0, 1);
+				rotate(MODEL, rotasaoCima, 0, 0, 1);
 				rotate(MODEL, rotPlaneV, 0, 0, 1);
 				rotate(MODEL, rotPlaneH, 1, 0, 0);
 			}
@@ -340,6 +440,7 @@ void renderAviao() {
 				scale(MODEL, 2.0f, 1.0f, 1.0f);
 			}
 			else if (objId == 1) { //corpo do aviao
+				glUniform1i(texMode_uniformId, 10);
 				translate(MODEL, 0.125f, 0, 0);
 				scale(MODEL, 1.5f, 0.5f, 0.5f);
 				rotate(MODEL, 90, 0, 0, 1);
@@ -374,22 +475,45 @@ void renderAviao() {
 
 			popMatrix(MODEL);
 			objId++;
-			if (!bateu) {
-				if (!o && !p && (rotPlaneH > 0.3f || rotPlaneH < -0.3f)) {
-					if (rotPlaneH > 0.0f)
-						rotPlaneH -= 0.2f;
-					else
-						rotPlaneH += 0.2f;
-				}
-				if (!q && !a && (rotPlaneV > 0.3f || rotPlaneV < -0.3f)) {
-					if (rotPlaneV > 0.0f)
-						rotPlaneV -= 0.2f;
-					else
-						rotPlaneV += 0.2f;
-				}
-				helice += 2.0f;
-			}
 		}
+	}
+}
+
+void atualizaInimigo(int inimigo) {
+	switch (inimigo) {
+	case 1:
+		rotasaoLadoUm = (float)(rand() % 360);
+		rotasaoCimaUm = (float)(rand() % 360);
+		posisaoXUm =(float) (rand() % 1000);
+		posisaoYUm = (float)(rand() % 150 + 150);
+		posisaoZUm =(float)(rand() % 1000);
+		break;
+	case 2:
+		rotasaoLadoDois = (float)(rand() % 360);
+		rotasaoCimaDois = (float)(rand() % 360);
+		posisaoXDois = (float)(rand() % 1000);
+		posisaoYDois = (float)(rand() % 150 + 150);
+		posisaoZDois = (float)(rand() % 1000);
+		break;
+	case 3:
+		rotasaoLadoTres = (float)(rand() % 360);
+		rotasaoCimaTres = (float)(rand() % 360);
+		posisaoXTres = (float)(rand() % 1000);
+		posisaoYTres = (float)(rand() % 150 + 150);
+		posisaoZTres = (float)(rand() % 1000);
+		break;
+	}
+}
+
+void atualizaAviaoInfo() {
+	if (posisaoXUm < 0.0f || posisaoXUm > 1008.0f || posisaoYUm < 100.0f || posisaoYUm > 300.0f || posisaoZUm < 0.0f || posisaoZUm > 1008.0f) {
+		atualizaInimigo(1);
+	}
+	if (posisaoXDois < 0.0f || posisaoXDois > 1008.0f || posisaoYDois < 100.0f || posisaoYDois > 300.0f || posisaoZDois < 0.0f || posisaoZDois > 1008.0f) {
+		atualizaInimigo(2);
+	}
+	if (posisaoXTres < 0.0f || posisaoXTres > 1008.0f || posisaoYTres < 100.0f || posisaoYTres > 300.0f || posisaoZTres < 0.0f || posisaoZTres > 1008.0f) {
+		atualizaInimigo(3);
 	}
 }
 
@@ -513,7 +637,7 @@ void renderTorre() {
 	}
 }
 
-void renderSign(int x, int z, int type) {
+void renderSign(int x, int z, int type, int ori) {
 	GLint loc;
 
 	int use = 4;
@@ -531,6 +655,9 @@ void renderSign(int x, int z, int type) {
 	//int orientX = rand() % 2;
 	pushMatrix(MODEL);
 	translate(MODEL, x * 48 + 4, alturaPredios[x][z], z * 48 + 29);
+	if (ori == 0) {
+		rotate(MODEL, 90, 0, 1, 0);
+	}
 	switch (type) {
 	case 1:
 		//cola
@@ -581,7 +708,87 @@ void renderSign(int x, int z, int type) {
 void renderSigns() {
 	for (int i = 0; i < N_SIGNS; i++) {
 		//renderSign(rand() % Q_PREDIOS, rand() % Q_PREDIOS, rand() % 5 + 1);
-		renderSign(signsX[i], signsZ[i], signTypes[i]);
+		renderSign(signsX[i], signsZ[i], signTypes[i], orientasao[i]);
+		//printf("%d\n", i);
+	}
+	/*if (i == 2 && j == 0) {
+		renderSign(i, j, 1);
+	}
+	else if (i == 4 && j == 1) {
+		renderSign(i, j, 2);
+	}
+	else if (i == 1 && j == 1) {
+		renderSign(i, j, 3);
+	}
+	else if (i == 2 && j == 2) {
+		renderSign(i, j, 4);
+	}
+	else if (i == 3 && j == 1) {
+		renderSign(i, j, 5);
+	}*/
+}
+
+void renderAro(int x, int z, int type, int altura) {
+	GLint loc;
+
+	int use = 7;
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	float dif[] = { 0.8f, 0.f, 0.75f, 1.0f };
+	glUniform4fv(loc, 1, dif);
+
+	glUniform1i(texMode_uniformId, 10);
+	//int orientX = rand() % 2;
+	pushMatrix(MODEL);
+	translate(MODEL, x , altura, z );
+	//switch (type) {
+	//case 1:
+	//	//horizontal
+	//	break;
+	//case 2:
+	//	//vertical
+	//	rotate(MODEL, 90, 0, 1, 0);
+	//	break;
+	//case 3:
+	//	//cima
+	//	rotate(MODEL, 90, 1, 0, 0);
+	//	break;
+	//}
+	if (type == 2) {
+		rotate(MODEL, 90, 0, 1, 0);
+	}
+	else if (type == 3) {
+		rotate(MODEL, 90, 1, 0, 0);
+	}
+	else if (type == 4) {
+		rotate(MODEL, 45, 0, 1, 0);
+		rotate(MODEL, 90, 1, 0, 0);
+	}
+	//scale(MODEL, 2.5f, 2.5f, 2.5f);
+	/*if(orientX == 0){
+		rotate(MODEL, 90, 0, 1, 0);
+	}*/
+	drawMesh(use);
+	popMatrix(MODEL);
+
+
+}
+void renderAros() {
+	//for (int i = 0; i < N_AROS; i++) {
+	//	//renderSign(rand() % Q_PREDIOS, rand() % Q_PREDIOS, rand() % 5 + 1);
+	//	renderAro(arosX[i], arosZ[i], aroTypes[i], alturaAro[i]);
+	//	//printf("%d\n", i);
+	//}
+	for (int i = 0; i < 13; i++) {
+		
+		renderAro(424 + i * 32, 16 + i * 32, 4, 50);
+		
 	}
 	/*if (i == 2 && j == 0) {
 		renderSign(i, j, 1);
@@ -629,6 +836,7 @@ void renderCity() {
 
 				popMatrix(MODEL);
 
+				/* POSSIVEL TETO DO PREDIO (IMPORTANTE)
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
@@ -640,12 +848,12 @@ void renderCity() {
 				glUniform1f(loc, myMeshes[4].mat.shininess);
 				pushMatrix(MODEL);
 
-				translate(MODEL, i * 48-2, 0, j * 48-2);
+				translate(MODEL, i * 48-2, alturaPredios[i][j], j * 48-2);
 				scale(MODEL, comprimentoPredio+4, 0.95f, larguraPredio+4);
 
 				drawMesh(4);
 
-				popMatrix(MODEL);
+				popMatrix(MODEL);*/
 			}
 		}
 	}
@@ -714,10 +922,12 @@ void renderChao() {
 				scale(MODEL, 14.0f, 1.1f, 1074.0f);
 			}
 			else if (objId == 2) { //parque
+				glUniform1i(texMode_uniformId, 2);
 				translate(MODEL, 96.0f, 0.0f, 576.0f);
 				scale(MODEL, 80.0f, 1.1f, 80.0f);
 			}
 			else if (objId == 3) { //parque cima
+				glUniform1i(texMode_uniformId, 2);
 				translate(MODEL, 816.0f, 0.0f, 768.0f);
 				scale(MODEL, 32.0f, 1.1f, 32.0f);
 			}
@@ -791,8 +1001,6 @@ void renderChao() {
 			popMatrix(MODEL);
 			objId++;
 
-			glDisable(GL_BLEND);
-			glDepthMask(GL_TRUE);
 		}
 	}
 	for (int k = 0; k < 50; k++) {
@@ -815,28 +1023,26 @@ void renderChao() {
 
 		drawMesh(use);
 		popMatrix(MODEL);
-
-		glDisable(GL_BLEND);
-		glDepthMask(GL_TRUE);
 	}
 }
 
 void updateMisseis() {
-	if (nMisseisAtivos > 0) {
 		GLint loc;
 		for (int i = 0; i < N_MISSEIS_MAX; i++) {
-			if (infoMisseis[i][0] != 0.0f) {
+			if (infoMisseis[i][3] != 0.0f) {
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 				glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-				glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
+				float dif[4] = { 0.9f, 0.0f, 0.7f, 1.0f };
+				glUniform4fv(loc, 1, dif);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
 				glUniform4fv(loc, 1, myMeshes[3].mat.specular);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
 				glUniform1f(loc, myMeshes[3].mat.shininess);
 				pushMatrix(MODEL);
 
+				glUniform1i(texMode_uniformId, 10);
 				translate(MODEL, infoMisseis[i][2], infoMisseis[i][3], infoMisseis[i][4]);
 				rotate(MODEL, -infoMisseis[i][0], 0, 1, 0);
 				rotate(MODEL, infoMisseis[i][1], 0, 0, 1);
@@ -855,6 +1061,126 @@ void updateMisseis() {
 				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180);
 			}
 		}
+}
+
+void updateMisseisInimigos() {
+	GLint loc;
+	for (int j = 0; j < 3; j++) {
+		for (int i = 0; i < N_MISSEIS_MAX; i++) {
+			if (j == 0) {
+			if (infoMisseisUm[i][3] != 0.0f) {
+				//printf("Missil %d: %f %f %f %f %f\n", i, infoMisseisUm[i][0], infoMisseisUm[i][1], infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
+				// send the material
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+				glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+				glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+				glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+				glUniform1f(loc, myMeshes[3].mat.shininess);
+				pushMatrix(MODEL);
+
+				translate(MODEL, infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
+				rotate(MODEL, -infoMisseisUm[i][0], 0, 1, 0);
+				rotate(MODEL, infoMisseisUm[i][1], 0, 0, 1);
+				translate(MODEL, 0.0f, -0.75f, 0.0f);
+				scale(MODEL, 2.0f, 0.5f, 0.5f);
+				rotate(MODEL, 90, 0, 0, 1);
+
+				drawMesh(3);
+
+				popMatrix(MODEL);
+
+				//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
+
+				infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+				infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
+				infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+			}
+			if (infoMisseisUm[i][3] < 0.0f) {
+				infoMisseisUm[i][0] = 0.0f;
+				infoMisseisUm[i][1] = 0.0f;
+				infoMisseisUm[i][2] = 0.0f;
+				infoMisseisUm[i][3] = 0.0f;
+				infoMisseisUm[i][4] = 0.0f;
+			}
+			}
+			if (j == 1) {
+				if (infoMisseisDois[i][3] != 0.0f) {
+					// send the material
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+					glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+					glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+					glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+					glUniform1f(loc, myMeshes[3].mat.shininess);
+					pushMatrix(MODEL);
+
+					translate(MODEL, infoMisseisDois[i][2], infoMisseisDois[i][3], infoMisseisDois[i][4]);
+					rotate(MODEL, -infoMisseisDois[i][0], 0, 1, 0);
+					rotate(MODEL, infoMisseisDois[i][1], 0, 0, 1);
+					scale(MODEL, 2.0f, 0.5f, 0.5f);
+					rotate(MODEL, 90, 0, 0, 1);
+
+					drawMesh(3);
+
+					popMatrix(MODEL);
+
+					//printf("rotL: %f  rotC: %f", infoMisseisDois[0][0], infoMisseisDois[0][1]);
+
+					infoMisseisDois[i][2] += 1.0f * cos(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
+					infoMisseisDois[i][3] += 1.0f * sin(infoMisseisDois[i][1] * PI / 180);
+					infoMisseisDois[i][4] += 1.0f * sin(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
+				}
+				if (infoMisseisDois[i][3] < 0.0f) {
+					infoMisseisDois[i][0] = 0.0f;
+					infoMisseisDois[i][1] = 0.0f;
+					infoMisseisDois[i][2] = 0.0f;
+					infoMisseisDois[i][3] = 0.0f;
+					infoMisseisDois[i][4] = 0.0f;
+				}
+			}
+			if (j == 2) {
+				if (infoMisseisTres[i][3] != 0.0f) {
+					// send the material
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+					glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+					glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+					glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+					glUniform1f(loc, myMeshes[3].mat.shininess);
+					pushMatrix(MODEL);
+
+					translate(MODEL, infoMisseisTres[i][2], infoMisseisTres[i][3], infoMisseisTres[i][4]);
+					rotate(MODEL, -infoMisseisTres[i][0], 0, 1, 0);
+					rotate(MODEL, infoMisseisTres[i][1], 0, 0, 1);
+					scale(MODEL, 2.0f, 0.5f, 0.5f);
+					rotate(MODEL, 90, 0, 0, 1);
+
+					drawMesh(3);
+
+					popMatrix(MODEL);
+
+					//printf("rotL: %f  rotC: %f", infoMisseisTres[0][0], infoMisseisTres[0][1]);
+
+					infoMisseisTres[i][2] += 1.0f * cos(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
+					infoMisseisTres[i][3] += 1.0f * sin(infoMisseisTres[i][1] * PI / 180);
+					infoMisseisTres[i][4] += 1.0f * sin(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
+				}
+				if (infoMisseisTres[i][3] < 0.0f) {
+					infoMisseisTres[i][0] = 0.0f;
+					infoMisseisTres[i][1] = 0.0f;
+					infoMisseisTres[i][2] = 0.0f;
+					infoMisseisTres[i][3] = 0.0f;
+					infoMisseisTres[i][4] = 0.0f;
+				}
+			}
+		}
 	}
 }
 
@@ -862,6 +1188,7 @@ void updateMisseis() {
 //
 // Collisions
 //
+
 float max(float* values, int numVals) {
 	float maxVal = -10000.0f;
 	for (int i = 0; i < numVals; i++) {
@@ -1113,30 +1440,70 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 	aabb->brCA = glm::vec4(minAX, minAY, minAZ, 1.0f);
 }
 
-bool checkaColisaoComMisseis(AABB* aabb) {
+bool checkaColisaoComMisseisInimigos(AABB* aabb) {
 	/*
-	printf("MaxX: %f\n", aabb->tlCA[0]);
-	printf("MinX: %f\n", aabb->brCA[0]);
-	printf("MaxY: %f\n", aabb->tlCA[1]);
-	printf("MaxY: %f\n", aabb->brCA[1]);
-	printf("MaxZ: %f\n", aabb->tlCA[2]);
-	printf("MaxZ: %f\n", aabb->brCA[2]);*/
+	printf("MaxX: %f\n", aabb->tlC[0]);
+	printf("MinX: %f\n", aabb->brC[0]);
+	printf("MaxY: %f\n", aabb->tlC[1]);
+	printf("MaxY: %f\n", aabb->brC[1]);
+	printf("MaxZ: %f\n", aabb->tlC[2]);
+	printf("MaxZ: %f\n", aabb->brC[2]);*/
 	bool colideComMissil = false;
-	if (nMisseisAtivos < 1) {
-		return false;
-	}
-	else {
+	for (int j = 0; j < 3; j++) {
 		for (int i = 0; i < N_MISSEIS_MAX; i++) {
-			if (infoMisseis[i][0] != 0.0f) {
-				colideComMissil = colideComMissil || (infoMisseis[i][2] >= aabb->brC[0] && infoMisseis[i][2] <= aabb->tlC[0] &&
-					infoMisseis[i][3] >= aabb->brC[1] && infoMisseis[i][3] <= aabb->tlC[1] &&
-					infoMisseis[i][4] >= aabb->brC[2] && infoMisseis[i][4] <= aabb->tlC[2]) ||
-					(infoMisseis[i][2] >= aabb->brCA[0] && infoMisseis[i][2] <= aabb->tlCA[0] &&
-					infoMisseis[i][3] >= aabb->brCA[1] && infoMisseis[i][3] <= aabb->tlCA[1] &&
-					infoMisseis[i][4] >= aabb->brCA[2] && infoMisseis[i][4] <= aabb->tlCA[2]);
+			if (j == 0) {
+				if (infoMisseisUm[i][3] != 0.0f) {
+					colideComMissil = colideComMissil || (infoMisseisUm[i][2] >= aabb->brC[0] && infoMisseisUm[i][2] <= aabb->tlC[0] &&
+						infoMisseisUm[i][3] >= aabb->brC[1] && infoMisseisUm[i][3] <= aabb->tlC[1] &&
+							infoMisseisUm[i][4] >= aabb->brC[2] && infoMisseisUm[i][4] <= aabb->tlC[2]) ||
+						(infoMisseisUm[i][2] >= aabb->brCA[0] && infoMisseisUm[i][2] <= aabb->tlCA[0] &&
+						infoMisseisUm[i][3] >= aabb->brCA[1] && infoMisseisUm[i][3] <= aabb->tlCA[1] &&
+						infoMisseisUm[i][4] >= aabb->brCA[2] && infoMisseisUm[i][4] <= aabb->tlCA[2]);
+				}
 			}
+			else if (j == 1) {
+				if (infoMisseisDois[i][3] != 0.0f) {
+					colideComMissil = colideComMissil || (infoMisseisDois[i][2] >= aabb->brC[0] && infoMisseisDois[i][2] <= aabb->tlC[0] &&
+						infoMisseisDois[i][3] >= aabb->brC[1] && infoMisseisDois[i][3] <= aabb->tlC[1] &&
+						infoMisseisDois[i][4] >= aabb->brC[2] && infoMisseisDois[i][4] <= aabb->tlC[2]) ||
+						(infoMisseisDois[i][2] >= aabb->brCA[0] && infoMisseisDois[i][2] <= aabb->tlCA[0] &&
+							infoMisseisDois[i][3] >= aabb->brCA[1] && infoMisseisDois[i][3] <= aabb->tlCA[1] &&
+							infoMisseisDois[i][4] >= aabb->brCA[2] && infoMisseisDois[i][4] <= aabb->tlCA[2]);
+				}
+			}
+			else if (j == 2) {
+					if (infoMisseisTres[i][3] != 0.0f) {
+						colideComMissil = colideComMissil || (infoMisseisTres[i][2] >= aabb->brC[0] && infoMisseisTres[i][2] <= aabb->tlC[0] &&
+							infoMisseisTres[i][3] >= aabb->brC[1] && infoMisseisTres[i][3] <= aabb->tlC[1] &&
+							infoMisseisTres[i][4] >= aabb->brC[2] && infoMisseisTres[i][4] <= aabb->tlC[2]) ||
+							(infoMisseisTres[i][2] >= aabb->brCA[0] && infoMisseisTres[i][2] <= aabb->tlCA[0] &&
+								infoMisseisTres[i][3] >= aabb->brCA[1] && infoMisseisTres[i][3] <= aabb->tlCA[1] &&
+								infoMisseisTres[i][4] >= aabb->brCA[2] && infoMisseisTres[i][4] <= aabb->tlCA[2]);
+					}
+				}
+		}
+		if (colideComMissil) {
+			return colideComMissil;
 		}
 	}
+	return colideComMissil;
+}
+
+bool checkaColisaoComMisseis(AABB* aabb) {
+	bool colideComMissil = false;
+		for (int i = 0; i < N_MISSEIS_MAX; i++) {
+				if (infoMisseis[i][3] != 0.0f) {
+					colideComMissil = colideComMissil || (infoMisseis[i][2] >= aabb->brC[0] && infoMisseis[i][2] <= aabb->tlC[0] &&
+						infoMisseis[i][3] >= aabb->brC[1] && infoMisseis[i][3] <= aabb->tlC[1] &&
+							infoMisseis[i][4] >= aabb->brC[2] && infoMisseis[i][4] <= aabb->tlC[2]) ||
+						(infoMisseis[i][2] >= aabb->brCA[0] && infoMisseis[i][2] <= aabb->tlCA[0] &&
+						infoMisseis[i][3] >= aabb->brCA[1] && infoMisseis[i][3] <= aabb->tlCA[1] &&
+						infoMisseis[i][4] >= aabb->brCA[2] && infoMisseis[i][4] <= aabb->tlCA[2]);
+				}
+		}
+		if (colideComMissil) {
+			return colideComMissil;
+		}
 	return colideComMissil;
 }
 
@@ -1261,14 +1628,27 @@ bool checkCollisionBall(float ballX, float ballZ, float ballRadius, glm::vec4 to
 }
 
 void handleCollisions() {
-	updateAABB(&aabb, (rotasaoLado * PI / 180), (rotacaoCima * PI / 180), posisaoX, posisaoY, posisaoZ);
+	updateAABB(&aabb, (rotasaoLado * PI / 180), (rotasaoCima * PI / 180), posisaoX, posisaoY, posisaoZ);
+	updateAABB(&aabbUm, (rotasaoLadoUm * PI / 180), (rotasaoCimaUm * PI / 180), posisaoXUm, posisaoYUm, posisaoZUm);
+	updateAABB(&aabbDois, (rotasaoLadoDois * PI / 180), (rotasaoCimaDois * PI / 180), posisaoXDois, posisaoYDois, posisaoZDois);
+	updateAABB(&aabbTres, (rotasaoLadoTres * PI / 180), (rotasaoCimaTres * PI / 180), posisaoXTres, posisaoYTres, posisaoZTres);
 	bateu = checkaColisaoPredios(&aabb);
 	
-	if (checkaColisaoComMisseis(&aabb)) {
-		printf("MORREU\n");
+	if (checkaColisaoComMisseisInimigos(&aabb)) {
+		printf("morreu\n");
 	}
-	else {
-		printf("VIVO\n");
+
+	if (checkaColisaoComMisseis(&aabbUm)) {
+		printf("Aviao 1 morto\n");
+		atualizaInimigo(1);
+	}
+	if (checkaColisaoComMisseis(&aabbDois)) {
+		printf("Aviao 2 morto\n");
+		atualizaInimigo(2);
+	}
+	if (checkaColisaoComMisseis(&aabbTres)) {
+		printf("Aviao 3 morto\n");
+		atualizaInimigo(3);
 	}
 }
 
@@ -1303,21 +1683,132 @@ void fazGradienteLuz() {
 	//printf("luz indice: %d\n", luzIndice);
 }
 
+void heatSeek()
+{
+	//HEAT SEEK ZONA EXPERIMENTAL
+	float novaRLUm = atan((posisaoZ - posisaoZUm) / (posisaoX - posisaoXUm)) * 180.0f / PI;
+	if (posisaoX < posisaoXUm && posisaoZ < posisaoZUm) {
+		novaRLUm = -90.0f - (90.0f - novaRLUm);
+	}
+	else if (posisaoX < posisaoXUm && posisaoZ > posisaoZUm) {
+		novaRLUm = -180.0f + novaRLUm;
+	}
+
+	if (abs(rotasaoLadoUm - novaRLUm) > 1.0f) {
+		if (rotasaoLadoUm < novaRLUm) {
+			rotasaoLadoUm += 1.0f;
+		}
+		else {
+			rotasaoLadoUm -= 1.0f;
+		}
+	}
+
+	float novaRCUm = atan(sqrt(pow(posisaoX - posisaoXUm, 2.0) + pow(posisaoZ - posisaoZUm, 2.0)) / (posisaoY - posisaoYUm)) * 180.0f / PI;
+
+	if (posisaoY > posisaoYUm) {
+		novaRCUm = 90.0f - novaRCUm;
+	}
+	else {
+		novaRCUm = -(90.0f + novaRCUm);
+	}
+
+	if (abs(rotasaoCimaUm - novaRCUm) > 1.5f) {
+		if (rotasaoCimaUm < novaRCUm) {
+			rotasaoCimaUm += 1.5f;
+		}
+		else {
+			rotasaoCimaUm -= 1.5f;
+		}
+	}
+	//=============================
+	//HEAT SEEK ZONA EXPERIMENTAL
+	float novaRLDois = atan((posisaoZ - posisaoZDois) / (posisaoX - posisaoXDois)) * 180.0f / PI;
+	if (posisaoX < posisaoXDois && posisaoZ < posisaoZDois) {
+		novaRLDois = -90.0f - (90.0f - novaRLDois);
+	}
+	else if (posisaoX < posisaoXDois && posisaoZ > posisaoZDois) {
+		novaRLDois = -180.0f + novaRLDois;
+	}
+
+	if (abs(rotasaoLadoDois - novaRLDois) > 1.0f) {
+		if (rotasaoLadoDois < novaRLDois) {
+			rotasaoLadoDois += 1.0f;
+		}
+		else {
+			rotasaoLadoDois -= 1.0f;
+		}
+	}
+
+	float novaRCDois = atan(sqrt(pow(posisaoX - posisaoXDois, 2.0) + pow(posisaoZ - posisaoZDois, 2.0)) / (posisaoY - posisaoYDois)) * 180.0f / PI;
+
+	if (posisaoY > posisaoYDois) {
+		novaRCDois = 90.0f - novaRCDois;
+	}
+	else {
+		novaRCDois = -(90.0f + novaRCDois);
+	}
+
+	if (abs(rotasaoCimaDois - novaRCDois) > 1.5f) {
+		if (rotasaoCimaDois < novaRCDois) {
+			rotasaoCimaDois += 1.5f;
+		}
+		else {
+			rotasaoCimaDois -= 1.5f;
+		}
+	}
+	//=============================
+}
 
 // ------------------------------------------------------------
 //
 // Render stufff
 //
 
+
 void renderScene(void) {
 
 	GLint loc;
 
+	//printf("%f\n", rotasaoLado);
+
 	FrameCount++;
+	missilTimer++;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// load identity matrices
 	loadIdentity(VIEW);
 	loadIdentity(MODEL);
+
+	if (missilTimer == 20) {
+		//printf("ola1 %f\n", posisaoYUm);
+		infoMisseisUm[missilIndexUm][0] = rotasaoLadoUm;
+		infoMisseisUm[missilIndexUm][1] = rotasaoCimaUm;
+		infoMisseisUm[missilIndexUm][2] = posisaoXUm;
+		infoMisseisUm[missilIndexUm][3] = posisaoYUm;
+		infoMisseisUm[missilIndexUm][4] = posisaoZUm;
+		//printf("rL:%f rC:%f pX:%f pY:%f pZ:%f", infoMisseis[missilIndexUm][0], infoMisseis[missilIndexUm][1], infoMisseis[missilIndexUm][2], infoMisseis[missilIndexUm][3], infoMisseis[missilIndexUm][4]);
+		missilIndexUm = (missilIndexUm + 1) % N_MISSEIS_MAX;
+	}
+	else if (missilTimer == 40) {
+		//printf("ola2 %f\n", posisaoYDois);
+		infoMisseisDois[missilIndexDois][0] = rotasaoLadoDois;
+		infoMisseisDois[missilIndexDois][1] = rotasaoCimaDois;
+		infoMisseisDois[missilIndexDois][2] = posisaoXDois;
+		infoMisseisDois[missilIndexDois][3] = posisaoYDois;
+		infoMisseisDois[missilIndexDois][4] = posisaoZDois;
+		missilIndexDois = (missilIndexDois + 1) % N_MISSEIS_MAX;
+	}
+	else if (missilTimer == 60) {
+		//printf("ola3 %f\n", posisaoYTres);
+		infoMisseisTres[missilIndexTres][0] = rotasaoLadoTres + 0.0f;
+		infoMisseisTres[missilIndexTres][1] = rotasaoCimaTres + 0.0f;
+		infoMisseisTres[missilIndexTres][2] = posisaoXTres + 0.0f;
+		infoMisseisTres[missilIndexTres][3] = posisaoYTres + 0.0f;
+		infoMisseisTres[missilIndexTres][4] = posisaoZTres + 0.0f;
+		missilIndexTres = (missilIndexTres + 1) % N_MISSEIS_MAX;
+	}
+	if (missilTimer == 60) {
+		missilTimer = 0;
+	}
 
 	if (estaAcelerar && acelerasao < 2.0f) {
 		acelerasao += 0.05f;
@@ -1389,23 +1880,17 @@ void renderScene(void) {
 	glUniform1i(tex_loc8, 8);
 	glUniform1i(tex_loc9, 9);
 
-	//Associar os Texture Units aos Objects Texture
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
-	//Indicar aos samplers do GLSL quais os Texture Units a serem usados
-	glUniform1i(tex_loc, 0);
-
 
 	float ratio = (float)WinX / WinY;
 	int dirCamera = 1;
 	// set the camera using a function similar to gluLookAt
 	switch (camera) {
 	case 0:
-		if (rotacaoCima <= 295.5f && rotacaoCima > 115.5f) {
+		if (rotasaoCima <= 295.5f && rotasaoCima > 115.5f) {
 			dirCamera = -1;
 		}
 		// camera movel com motion sickness
-		lookAt(atrasoCamera[camIndex][0] - (10 * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * cos(rotasaoLado * PI / 180), atrasoCamera[camIndex][1] - 10 * sin((rotacaoCima)*PI / 180) + 5 * cos(-rotacaoCima * PI / 180), atrasoCamera[camIndex][2] - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1 * dirCamera, 0);
+		lookAt(atrasoCamera[camIndex][0] - (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180), atrasoCamera[camIndex][1] - 10 * sin((rotasaoCima)*PI / 180) + 5 * cos(-rotasaoCima * PI / 180), atrasoCamera[camIndex][2] - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1 * dirCamera, 0);
 		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
 		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
@@ -1424,22 +1909,23 @@ void renderScene(void) {
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
 	case 3:
-		if (rotacaoCima <= 295.5f && rotacaoCima > 115.5f){
+		if (rotasaoCima <= 295.5f && rotasaoCima > 115.5f){
 			dirCamera = -1;
 		}
 		// camera movel
-		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180)*cos(rotacaoCima* PI /180)) + 5*sin(-rotacaoCima * PI/180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotacaoCima) * PI / 180) + 5 * cos(-rotacaoCima * PI /180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180)) + 5 * sin(-rotacaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1*dirCamera, 0);
+		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180)*cos(rotasaoCima* PI /180)) + 5*sin(-rotasaoCima * PI/180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotasaoCima) * PI / 180) + 5 * cos(-rotasaoCima * PI /180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1*dirCamera, 0);
 		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
 		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
 	case 4:
-		/*
-		//camera de cima tudo
-		lookAt(TAM_TABULEIRO / 2, TAM_TABULEIRO, TAM_TABULEIRO / 2, TAM_TABULEIRO / 2, 0.0, TAM_TABULEIRO / 2, 1, 0, 0);
+		// camera movel
+		lookAt(luzesLocais[12][0], 3, luzesLocais[12][2], 496.0f, 150.0f, 496.0f, 0, 1, 0);
+		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
+		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
-		ortho(-50 * ratio, 50 * ratio, -50, 50, -300, 300);*/
+		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
 	case 5:
 		/*
@@ -1500,12 +1986,22 @@ void renderScene(void) {
 		glUniform4fv(luzLocal11_loc, 1, res);
 		multMatrixPoint(VIEW, luzesLocais[11], res);
 		glUniform4fv(luzLocal12_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[12], res);
+		glUniform4fv(luzLocal13_loc, 1, res);
 
 	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
+	respawnaAviao();
+
 	applyRotation();
 
-	renderAviao();
+	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
+
+	renderAviao(posisaoXUm, posisaoYUm, posisaoZUm, rotasaoCimaUm, rotasaoLadoUm, 0.0f, 0.0f);
+
+	renderAviao(posisaoXDois, posisaoYDois, posisaoZDois, rotasaoCimaDois, rotasaoLadoDois, 0.0f, 0.0f);
+
+	renderAviao(posisaoXTres, posisaoYTres, posisaoZTres, rotasaoCimaTres, rotasaoLadoTres, 0.0f, 0.0f);
 
 	renderCity();
 
@@ -1513,11 +2009,19 @@ void renderScene(void) {
 
 	renderSigns();
 
+	renderAros();
+
 	renderTorre();
 
 	updateMisseis();
 
+	updateMisseisInimigos();
+
+	/*if (!bateu) {*/
 	handleCollisions();
+	/*	rotLCam = rotasaoLado;
+		rotCCam = rotasaoCima;
+	}*/
 
 	multMatrixPoint(VIEW, spotLights, res);
 	glUniform4fv(spotLight1, 1, res);
@@ -1525,12 +2029,54 @@ void renderScene(void) {
 	glUniform4fv(spotDirection, 1, res);
 	
 	if (!bateu && !paraAviao) {
-		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
-		posisaoY += (0.3f + acelerasao) * sin(rotacaoCima * PI / 180);
-		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotacaoCima * PI / 180);
+		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180);
+		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180);
+		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180);
 	}
 
+	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180);
+	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180);
+	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180);
+
+
+	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180);
+	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180);
+	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180);
+
+	posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180);
+	posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180);
+	posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180);
+	
+	heatSeek();
+
+	atualizaAviaoInfo();
+
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			if (!bateu) {
+				if (!o && !p && (rotPlaneH > 0.3f || rotPlaneH < -0.3f)) {
+					if (rotPlaneH > 0.0f)
+						rotPlaneH -= 0.2f;
+					else
+						rotPlaneH += 0.2f;
+				}
+				if (!q && !a && (rotPlaneV > 0.3f || rotPlaneV < -0.3f)) {
+					if (rotPlaneV > 0.0f)
+						rotPlaneV -= 0.2f;
+					else
+						rotPlaneV += 0.2f;
+				}
+				helice += 2.0f;
+			}
+		}
+	}
+	contadorBofia = (contadorBofia + 1 )%20;
+	if (contadorBofia == 0) {
+		luzBofia = (luzBofia == 0) ? 1 : 0;
+		glUniform1i(luzBofia_loc, luzBofia);
+	}
 	//renderTexto();
+	carroDaBofia();
 	fazGradienteLuz();
 	rodaLuzDeCima();
 	glutSwapBuffers();
@@ -1561,13 +2107,15 @@ void processKeys(unsigned char key, int xx, int yy)
 	case 'm': glEnable(GL_MULTISAMPLE); break;
 	case 'n':
 		printf("Pressed n \n");
-		glDisable(GL_MULTISAMPLE);
+		//glDisable(GL_MULTISAMPLE);
 		diaLigado = (diaLigado == 0 ? 1 : 0);
 		if (!diaLigado) {
 			glClearColor(0.15f, 0.05f, 0.3f, 1.0f);
+			pointLightsLigadas = 1;
 		}
 		else {
 			glClearColor(0.81f, 0.91f, 0.98f, 1.0f);
+			pointLightsLigadas = 0;
 		}
 		break;
 	case 'p': 
@@ -1616,17 +2164,22 @@ void processKeys(unsigned char key, int xx, int yy)
 	case '3':
 		camera = 3;
 		break;
+	case '4':
+		camera = 4;
+		break;
 	case 'f':
 		if (fogFlag == 0) fogFlag = 1; else fogFlag = 0;
 		break;
 	case 32: //espaso
 		infoMisseis[missilIndex][0] = rotasaoLado + 0.0f;
-		infoMisseis[missilIndex][1] = rotacaoCima + 0.0f;
+		infoMisseis[missilIndex][1] = rotasaoCima + 0.0f;
 		infoMisseis[missilIndex][2] = posisaoX + 0.0f;
 		infoMisseis[missilIndex][3] = posisaoY + 0.0f;
 		infoMisseis[missilIndex][4] = posisaoZ + 0.0f;
 		missilIndex = (missilIndex + 1) % N_MISSEIS_MAX;
-		nMisseisAtivos += 1;
+		if (nMisseisAtivos < 20) {
+			nMisseisAtivos += 1;
+		}
 	}
 }
 
@@ -1752,6 +2305,7 @@ void mouseWheel(int wheel, int direction, int x, int y) {
 GLuint setupShaders() {
 
 	// Shader for models
+
 	shader.init();
 	shader.loadShader(VSShaderLib::VERTEX_SHADER, "shaders/pointlight.vert");
 	shader.loadShader(VSShaderLib::FRAGMENT_SHADER, "shaders/pointlight.frag");
@@ -1791,12 +2345,14 @@ GLuint setupShaders() {
 	luzLocal10_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal10");
 	luzLocal11_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal11");
 	luzLocal12_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal12");
+	luzLocal13_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal13");
 	dia = glGetUniformLocation(shader.getProgramIndex(), "dia");
 	pointLights = glGetUniformLocation(shader.getProgramIndex(), "pointLights");
 	corVariavel_loc = glGetUniformLocation(shader.getProgramIndex(), "corVariavel");
 	fogF = glGetUniformLocation(shader.getProgramIndex(), "fogFlag");
 	spotLight1 = glGetUniformLocation(shader.getProgramIndex(), "spotLight1");
 	spotDirection = glGetUniformLocation(shader.getProgramIndex(), "spotDirection");
+	luzBofia_loc = glGetUniformLocation(shader.getProgramIndex(), "luzBofia");
 	
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
@@ -1810,6 +2366,7 @@ GLuint setupShaders() {
 	
 	return(shader.isProgramLinked() && shaderText.isProgramLinked());
 }
+
 
 // ------------------------------------------------------------
 //
@@ -1850,6 +2407,7 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
+	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
 	float diff[] = { 1.0f, 0.86, 0.97f, 1.0f };
 	float spec[] = { 0.8f, 0.8f, 0.8f, 1.0f };
 	float emissive[] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -1933,6 +2491,16 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
+	// create geometry and VAO of the torus  7
+	amesh = createTorus(4.5f, 6.0f, 6, 8);
+	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
+	memcpy(amesh.mat.diffuse, diff, 4 * sizeof(float));
+	memcpy(amesh.mat.specular, spec, 4 * sizeof(float));
+	memcpy(amesh.mat.emissive, emissive, 4 * sizeof(float));
+	amesh.mat.shininess = shininess;
+	amesh.mat.texCount = texcount;
+	myMeshes.push_back(amesh);
+
 	srand(time(NULL));
 
 	for (int i = 0; i < Q_PREDIOS; i++) {
@@ -1966,13 +2534,32 @@ void init()
 	for (int i = 0; i < N_SIGNS; i++) {
 		signsX[i] = rand() % Q_PREDIOS;
 		signsZ[i] = rand() % Q_PREDIOS;
-		while (alturaPredios[signsX[i]][signsZ[i]] == 0) {
+		while (alturaPredios[signsX[i]][signsZ[i]] == 0 || temSign[signsX[i]][signsZ[i]] == 1) {
 			signsX[i] = rand() % Q_PREDIOS;
 			signsZ[i] = rand() % Q_PREDIOS;
 		}
+		temSign[signsX[i]][signsZ[i]] = 1;
 		signTypes[i] = rand() % 7 + 1;
+		orientasao[i] = rand() % 2;
+		//printf("%d\n", orientasao[i]);
+	}
+	for (int i = 0; i < N_AROS; i++) {
+		arosX[i] = rand() % Q_PREDIOS;
+		arosZ[i] = rand() % Q_PREDIOS;
+		while (alturaPredios[arosX[i]][arosZ[i]] == 0 ) {
+			arosX[i] = rand() % Q_PREDIOS;
+			arosZ[i] = rand() % Q_PREDIOS;
+		}
+		alturaAro[i] = rand() % 80 + 10;
+		aroTypes[i] = rand() % 3 + 1;
 	}
 
+	/*for (int i = 0; i < Q_PREDIOS; i++) {
+		for (int j = 0; j < Q_PREDIOS; j++) {
+			printf("%d", temSign[i][j]);
+		}
+		printf("\n");
+	}*/
 	luzesLocais[8][0] = 496 + 13.2 * cos(rotasaoLampada * PI / 180);
 	luzesLocais[8][2] = 496 + 13.2 * sin(rotasaoLampada * PI / 180);
 	luzesLocais[9][0] = 496 + 13.2 * cos((rotasaoLampada + 90) * PI / 180);
@@ -1981,6 +2568,10 @@ void init()
 	luzesLocais[10][2] = 496 + 13.2 * sin((rotasaoLampada + 180) * PI / 180);
 	luzesLocais[11][0] = 496 + 13.2 * cos((rotasaoLampada + 270) * PI / 180);
 	luzesLocais[11][2] = 496 + 13.2 * sin((rotasaoLampada + 270) * PI / 180);
+
+	atualizaInimigo(1);
+	atualizaInimigo(2);
+	atualizaInimigo(3);
 
 	// some GL settings
 	glEnable(GL_DEPTH_TEST);

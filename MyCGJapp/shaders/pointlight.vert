@@ -21,6 +21,7 @@ uniform vec4 luzLocal9;
 uniform vec4 luzLocal10;
 uniform vec4 luzLocal11;
 uniform vec4 luzLocal12;
+uniform vec4 luzLocal13;
 
 out vec3 lLocalDir1;
 out vec3 lLocalDir2;
@@ -34,6 +35,7 @@ out vec3 lLocalDir9;
 out vec3 lLocalDir10;
 out vec3 lLocalDir11;
 out vec3 lLocalDir12;
+out vec3 lLocalDir13;
 
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
@@ -55,7 +57,11 @@ void main () {
 	pos = m_viewModel * position;
 
 	DataOut.normal = normalize(m_normal * normal.xyz);
-	DataOut.lightDir = vec3(l_pos - pos);
+	if(dia == 1){
+		DataOut.lightDir = vec3(l_pos - pos);
+	}else{
+		DataOut.lightDir = vec3(0.0, 0.0, 0.0);
+	}
 	DataOut.eye = vec3(-pos);
 	DataOut.tex_coord = texCoord.st;
 
@@ -71,6 +77,7 @@ void main () {
 	lLocalDir10 = vec3(luzLocal10 - pos);
 	lLocalDir11 = vec3(luzLocal11 - pos);
 	lLocalDir12 = vec3(luzLocal12 - pos);
+	lLocalDir13 = vec3(luzLocal13 - pos);
 
 	if(fogFlag == 1){
 		float distance = length(pos);

@@ -171,6 +171,7 @@
     <ClInclude Include="cube.h" />
     <ClInclude Include="ft2build.h" />
     <ClInclude Include="geometry.h" />
+    <ClInclude Include="lightDemo.h" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="Texture_Loader.h" />
     <ClInclude Include="VertexAttrDef.h" />
