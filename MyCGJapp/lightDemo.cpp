@@ -799,26 +799,26 @@ void renderAros() {
 	//	renderAro(arosX[i], arosZ[i], aroTypes[i], alturaAro[i]);
 	//	//printf("%d\n", i);
 	//}
-	for (int i = 0; i < 13; i++) {
+	for (int i = 0; i < 12; i++) {
 		
-		renderAro(424 + i * 32, 16 + i * 32, 4, 50);
+		renderAro(448 + i * 48, 40 + i * 48, 4, 50);
 		
 	}
 
-	for (int i = 0; i < 6; i++) {
-		renderAro(585 - i * 32, 220 + i*32 , 5, 50);
+	for (int i = 0; i < 3; i++) {
+		renderAro(540 - i * 48, 256 + i*48 , 5, 50);
 	}
 
-	for (int i = 0; i < 11; i++) {
-		renderAro(424, 417 + i * 32, 1, 50);
+	for (int i = 0; i < 8; i++) {
+		renderAro(424, 400 + i * 48, 1, 50);
 	}
 
-	for (int i = 0; i < 7; i++) {
-		renderAro(407 - i * 32, 774 + i * 32, 5, 50);
+	for (int i = 0; i < 5; i++) {
+		renderAro(400 - i * 48, 784 + i * 48, 5, 50);
 	}
 
-	for (int i = 0; i < 13; i++) {
-		renderAro(407 - i * 32, 664, 6, 50);
+	for (int i = 0; i < 9; i++) {
+		renderAro(400 - i * 48, 664, 6, 50);
 	}
 	/*if (i == 2 && j == 0) {
 		renderSign(i, j, 1);
@@ -2538,7 +2538,7 @@ void init()
 	myMeshes.push_back(amesh);
 
 	// create geometry and VAO of the torus  7
-	amesh = createTorus(4.5f, 6.0f, 6, 8);
+	amesh = createTorus(6.5f, 8.0f, 6, 8);
 	memcpy(amesh.mat.ambient, amb, 4 * sizeof(float));
 	memcpy(amesh.mat.diffuse, diff, 4 * sizeof(float));
 	memcpy(amesh.mat.specular, spec, 4 * sizeof(float));
