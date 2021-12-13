@@ -218,7 +218,6 @@ int arosZ[N_AROS];
 int aroTypes[N_AROS];
 int alturaAro[N_AROS];
 
-
 void refresh(int value)
 {
 	glutPostRedisplay();
@@ -773,6 +772,18 @@ void renderAro(int x, int z, int type, int altura) {
 		rotate(MODEL, 45, 0, 1, 0);
 		rotate(MODEL, 90, 1, 0, 0);
 	}
+	else if(type == 5) {
+		rotate(MODEL, 130, 0, 1, 0);
+		rotate(MODEL, 90, 1, 0, 0);
+	}
+	else if(type == 1){
+		rotate(MODEL, 0, 0, 1, 0);
+		rotate(MODEL, 90, 1, 0, 0);
+	}
+	else {
+		rotate(MODEL, 90, 0, 1, 0);
+		rotate(MODEL, 90, 1, 0, 0);
+	}
 	//scale(MODEL, 2.5f, 2.5f, 2.5f);
 	/*if(orientX == 0){
 		rotate(MODEL, 90, 0, 1, 0);
@@ -792,6 +803,22 @@ void renderAros() {
 		
 		renderAro(424 + i * 32, 16 + i * 32, 4, 50);
 		
+	}
+
+	for (int i = 0; i < 6; i++) {
+		renderAro(585 - i * 32, 220 + i*32 , 5, 50);
+	}
+
+	for (int i = 0; i < 11; i++) {
+		renderAro(424, 417 + i * 32, 1, 50);
+	}
+
+	for (int i = 0; i < 7; i++) {
+		renderAro(407 - i * 32, 774 + i * 32, 5, 50);
+	}
+
+	for (int i = 0; i < 13; i++) {
+		renderAro(407 - i * 32, 664, 6, 50);
 	}
 	/*if (i == 2 && j == 0) {
 		renderSign(i, j, 1);
@@ -2101,6 +2128,7 @@ void processKeys(unsigned char key, int xx, int yy)
 		pointLightsLigadas = (pointLightsLigadas == 0 ? 1 : 0);
 		break;
 	case 'm': glEnable(GL_MULTISAMPLE); break;
+	case 'l': printf("X:%f Z:%f \n", posisaoX, posisaoZ); break;
 	case 'n':
 		printf("Pressed n \n");
 		//glDisable(GL_MULTISAMPLE);
