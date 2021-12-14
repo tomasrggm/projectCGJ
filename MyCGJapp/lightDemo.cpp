@@ -217,6 +217,7 @@ int arosX[N_AROS];
 int arosZ[N_AROS];
 int aroTypes[N_AROS];
 int alturaAro[N_AROS];
+int arosInfo[37][3];
 
 void refresh(int value)
 {
@@ -773,11 +774,10 @@ void renderAro(int x, int z, int type, int altura) {
 		rotate(MODEL, 90, 1, 0, 0);
 	}
 	else if(type == 5) {
-		rotate(MODEL, 130, 0, 1, 0);
+		rotate(MODEL, 135, 0, 1, 0);
 		rotate(MODEL, 90, 1, 0, 0);
 	}
 	else if(type == 1){
-		rotate(MODEL, 0, 0, 1, 0);
 		rotate(MODEL, 90, 1, 0, 0);
 	}
 	else {
@@ -799,26 +799,42 @@ void renderAros() {
 	//	renderAro(arosX[i], arosZ[i], aroTypes[i], alturaAro[i]);
 	//	//printf("%d\n", i);
 	//}
+	renderAro(0, 0, 1, 2);
 	for (int i = 0; i < 12; i++) {
 		
 		renderAro(448 + i * 48, 40 + i * 48, 4, 50);
+		arosInfo[0 + i][0] = 448 + i * 48;
+		arosInfo[0 + i][1] = 40 + i * 48;
+		arosInfo[0 + i][2] = 4;
 		
 	}
 
 	for (int i = 0; i < 3; i++) {
 		renderAro(540 - i * 48, 256 + i*48 , 5, 50);
+		arosInfo[12 + i][0] = 540 - i * 48;
+		arosInfo[12 + i][1] = 256 +i * 48;
+		arosInfo[12 + i][2] = 5;
 	}
 
 	for (int i = 0; i < 8; i++) {
 		renderAro(424, 400 + i * 48, 1, 50);
+		arosInfo[15 + i][0] = 424;
+		arosInfo[15 + i][1] = 400 + i * 48;
+		arosInfo[15 + i][2] = 1;
 	}
 
 	for (int i = 0; i < 5; i++) {
 		renderAro(400 - i * 48, 784 + i * 48, 5, 50);
+		arosInfo[23 + i][0] = 400 - i * 48;
+		arosInfo[23 + i][1] = 784 + i * 48;
+		arosInfo[23 + i][2] = 5;
 	}
 
 	for (int i = 0; i < 9; i++) {
 		renderAro(400 - i * 48, 664, 6, 50);
+		arosInfo[28 + i][0] = 400 - i * 48;
+		arosInfo[28 + i][1] = 664;
+		arosInfo[28 + i][2] = 6;
 	}
 	/*if (i == 2 && j == 0) {
 		renderSign(i, j, 1);
@@ -1658,6 +1674,35 @@ bool checkCollisionBall(float ballX, float ballZ, float ballRadius, glm::vec4 to
 	return length(distance) < ballRadius;
 }
 
+bool checkaColisaoComAros() {
+	for (int i = 0; i < 37; i++) {
+		int tipoAro = arosInfo[i][2];
+		switch (tipoAro) {
+		case 1:
+			if (posisaoX < arosInfo[i][0] + 8 && posisaoX > arosInfo[i][0] - 8 && posisaoY < 58 && posisaoY > 42) {
+				return true;
+			}
+			break;
+		case 4:
+			if (posisaoZ < arosInfo[i][1] + 8 && posisaoZ > arosInfo[i][1] - 8 && posisaoY < 58 && posisaoY > 42) {
+				return true;
+			}
+			break;
+		case 5:
+			if (posisaoZ < arosInfo[i][1] + 8 && posisaoZ > arosInfo[i][1] - 8 && posisaoY < 58 && posisaoY > 42) {
+				return true;
+			}
+			break;
+		case 6:
+			if (posisaoZ < arosInfo[i][1] + 8 && posisaoZ > arosInfo[i][1] - 8 && posisaoY < 58 && posisaoY > 42) {
+				return true;
+			}
+			break;
+		}
+	}
+	return false;
+}
+
 void handleCollisions() {
 	updateAABB(&aabb, (rotasaoLado * PI / 180), (rotasaoCima * PI / 180), posisaoX, posisaoY, posisaoZ);
 	updateAABB(&aabbUm, (rotasaoLadoUm * PI / 180), (rotasaoCimaUm * PI / 180), posisaoXUm, posisaoYUm, posisaoZUm);
@@ -1681,6 +1726,11 @@ void handleCollisions() {
 		printf("Aviao 3 morto\n");
 		atualizaInimigo(3);
 	}
+
+	if (checkaColisaoComAros()) {
+		acelerasao += 0.03f;
+	}
+
 }
 
 void rodaLuzDeCima() {
@@ -1846,7 +1896,7 @@ void renderScene(void) {
 	}
 	else {
 		if (acelerasao > 0.0f) {
-			acelerasao -= 0.02f;
+			acelerasao -= 0.005f;
 		}
 	}
 
