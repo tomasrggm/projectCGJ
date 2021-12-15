@@ -28,6 +28,7 @@ uniform int pointLights;
 uniform vec4 corVariavel;
 uniform int dia;
 uniform int luzBofia;
+uniform int spotlightOn; //0 ligadas 1 desligadas
 
 in vec3 lLocalDir1;
 in vec3 lLocalDir2;
@@ -42,6 +43,8 @@ in vec3 lLocalDir10;
 in vec3 lLocalDir11;
 in vec3 lLocalDir12;
 in vec3 lLocalDir13;
+in vec3 lLocalDir14; //spotlight
+in vec3 lLocalDir15; //spotlight
 
 uniform int fogFlag;
 in vec4 pos;
@@ -73,6 +76,8 @@ void main() {
 	float intSpec;
 	vec4 resultado = vec4(0.0);
 	float dist, attenuation;
+	float l_spotCutOff = 0.995f;
+	vec4 l_spotDir = vec4(0.0,0.0,-1.0,1.0);
 	
 	if (intensity > 0.0) {
 
@@ -206,6 +211,38 @@ void main() {
 					resultado += vec4(0.0, 0.0, 1.0, 1.0) * intensity * attenuation ;
 				}
 				
+			}
+	}
+	if(spotlightOn == 0){
+			float intensity = 0.0;
+			vec4 spec = vec4(0.0);
+			vec3 ld = normalize(lLocalDir14);
+			vec3 sd = normalize(vec3(-l_spotDir));
+			if (dot(sd,ld) > l_spotCutOff) {
+				vec3 n = normalize(DataIn.normal);
+				intensity = max(dot(n,ld), 0.0);
+				if (intensity > 0.0) {
+					vec3 eye = normalize(DataIn.eye);
+					vec3 h = normalize(ld + eye);
+					float intSpec = max(dot(h,n), 0.0);
+					spec = mat.specular * pow(intSpec, mat.shininess);
+					resultado += (spec + intensity*mat.diffuse) ;
+				}
+			}
+			intensity = 0.0;
+			spec = vec4(0.0);
+			ld = normalize(lLocalDir15);
+			sd = normalize(vec3(-l_spotDir));
+			if (dot(sd,ld) > l_spotCutOff) {
+				vec3 n = normalize(DataIn.normal);
+				intensity = max(dot(n,ld), 0.0);
+				if (intensity > 0.0) {
+					vec3 eye = normalize(DataIn.eye);
+					vec3 h = normalize(ld + eye);
+					float intSpec = max(dot(h,n), 0.0);
+					spec = mat.specular * pow(intSpec, mat.shininess);
+					resultado += (spec + intensity*mat.diffuse) ;
+				}
 			}
 	}
 

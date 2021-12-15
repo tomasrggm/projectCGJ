@@ -74,7 +74,7 @@ GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
 GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9;
-GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc;
+GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
 GLint dia;
 GLint pointLights;
 GLint corVariavel_loc;
@@ -125,6 +125,7 @@ float spotLights[4] = { 0.0f,0.0f,0.0f, 1.0f};
 float spotLightDirection[4] = { 0.0f, 0.0f, 0.0f, 1.0f};
 GLint spotLight1;
 GLint spotDirection;
+GLint spotlightOn;
 
 //variaveis criadas para os misseis
 int nMisseisAtivos = 0;
@@ -202,6 +203,8 @@ int luzBofia = 0;
 float corLuz[4] = { 1.0f, 0.0f, 1.0f , 1.0};
 int luzIndice = 0;
 int mudaLuz = -1;
+int luzSpot = 0;
+
 
 //signs
 #define N_SIGNS 50
@@ -2030,7 +2033,8 @@ void renderScene(void) {
 
 		//send the light position in eye coordinates
 		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
-
+		
+		glUniform1i(spotlightOn,luzSpot);
 		float res[4];
 		multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space
 		glUniform4fv(lPos_uniformId, 1, res);
@@ -2061,6 +2065,14 @@ void renderScene(void) {
 		glUniform4fv(luzLocal12_loc, 1, res);
 		multMatrixPoint(VIEW, luzesLocais[12], res);
 		glUniform4fv(luzLocal13_loc, 1, res);
+
+		float loc14[4] = {posisaoX,posisaoY,posisaoZ-20.0f,1.0f};
+		multMatrixPoint(VIEW, loc14, res);
+		glUniform4fv(luzLocal14_loc, 1, res);
+
+		float loc15[4] = { posisaoX,posisaoY,posisaoZ + 20.0f,1.0f };
+		multMatrixPoint(VIEW, loc15, res);
+		glUniform4fv(luzLocal15_loc, 1, res);
 
 	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
@@ -2226,6 +2238,7 @@ void processKeys(unsigned char key, int xx, int yy)
 	case 'h':
 		estaAcelerar = true;
 		break;
+	case 'g': if (luzSpot == 0) luzSpot = 1; else luzSpot = 0; break;
 	case '0':
 		camera = 0;
 		break;
@@ -2420,6 +2433,8 @@ GLuint setupShaders() {
 	luzLocal11_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal11");
 	luzLocal12_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal12");
 	luzLocal13_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal13");
+	luzLocal14_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal14");
+	luzLocal15_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal15");
 	dia = glGetUniformLocation(shader.getProgramIndex(), "dia");
 	pointLights = glGetUniformLocation(shader.getProgramIndex(), "pointLights");
 	corVariavel_loc = glGetUniformLocation(shader.getProgramIndex(), "corVariavel");
@@ -2427,6 +2442,7 @@ GLuint setupShaders() {
 	spotLight1 = glGetUniformLocation(shader.getProgramIndex(), "spotLight1");
 	spotDirection = glGetUniformLocation(shader.getProgramIndex(), "spotDirection");
 	luzBofia_loc = glGetUniformLocation(shader.getProgramIndex(), "luzBofia");
+	spotlightOn = glGetUniformLocation(shader.getProgramIndex(), "spotlightOn");
 	
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
