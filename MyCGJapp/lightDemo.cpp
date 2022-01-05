@@ -155,6 +155,11 @@ int larguraPredio = 32;
 int comprimentoPredio = 32;
 int fogFlag = 0;
 
+//Variaveis criadas para o mini mapa
+float posisaoXMapa = posisaoX;
+float posisaoYMapa = posisaoY;
+float posisaoZMapa = posisaoZ;
+
 //bounding boxes do aviao
 AABB aabb;
 bool bateu = false;
@@ -246,7 +251,8 @@ void timer(int value)
 //
 
 void changeSize(int w, int h) {
-
+	WinX = w;
+	WinY = h;
 	float ratio;
 	// Prevent a divide by zero, when window is too short
 	if(h == 0)
@@ -389,6 +395,59 @@ void applyRotation() {
 	}
 }
 
+void renderMiniMapa() {
+	GLint loc;
+	int use = 5;
+
+	glUniform1i(texMode_uniformId, 11);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, posisaoX, posisaoY, posisaoZ);
+	rotate(MODEL, -rotasaoLado, 0, 1, 0);
+	rotate(MODEL, rotasaoCima, 0, 0, 1);
+	rotate(MODEL, -90, 0, 1, 0);
+	scale(MODEL, 10, 10, 1);
+
+	drawMesh(use);
+	glDisable(GL_STENCIL_TEST);
+	popMatrix(MODEL);
+
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_NEVER, 0x1, 0x1);
+	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, posisaoX, posisaoY, posisaoZ);
+	rotate(MODEL, -rotasaoLado, 0, 1, 0);
+	rotate(MODEL, rotasaoCima, 0, 0, 1);
+	rotate(MODEL, -90, 0, 1, 0);
+	scale(MODEL, 9.5, 9.5, 0);
+
+	drawMesh(use);
+	glDisable(GL_STENCIL_TEST);
+	popMatrix(MODEL);
+}
+
 void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCima, float rotasaoLado, float rotPlaneV, float rotPlaneH) {
 	int objId = 0;
 	GLint loc;
@@ -483,6 +542,32 @@ void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCi
 			objId++;
 		}
 	}
+}
+
+void renderAviaoCone(float posisaoX, float posisaoY, float posisaoZ, float rotasaoLado) {
+	GLint loc;
+	int use = 2;
+	glUniform1i(texMode_uniformId, 11);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	pushMatrix(MODEL);
+	translate(MODEL, posisaoX, posisaoY, posisaoZ);
+	rotate(MODEL, -rotasaoLado, 0, 1, 0);
+	rotate(MODEL, -90, 0, 0, 1);
+	translate(MODEL, 0, -4, 0);
+	scale(MODEL, 1, 8, 4);
+
+	drawMesh(use);
+
+	popMatrix(MODEL);
 }
 
 void atualizaInimigo(int inimigo) {
@@ -815,7 +900,7 @@ void renderAros() {
 	for (int i = 0; i < 3; i++) {
 		renderAro(540 - i * 48, 256 + i*48 , 5, 50);
 		arosInfo[12 + i][0] = 540 - i * 48;
-		arosInfo[12 + i][1] = 256 +i * 48;
+		arosInfo[12 + i][1] = 256 + i * 48;
 		arosInfo[12 + i][2] = 5;
 	}
 
@@ -1564,9 +1649,8 @@ bool checkCollisionBox(float a_xmin, float a_xmax, float a_zmin, float a_zmax, f
 }
 
 bool checkaColisaoPredios(AABB* aabb) {
-	glm::vec4 v1 = aabb->v1;
-	glm::vec4 v2 = aabb->v2;
-	glm::vec4 v4 = aabb->v4;
+	glm::vec4 v1 = aabb->v3;
+	glm::vec4 v2 = aabb->v4;
 	glm::vec4 v1A = aabb->v1A;
 	glm::vec4 v2A = aabb->v2A;
 	float CorpoY = posisaoY;
@@ -1926,13 +2010,12 @@ void renderScene(void) {
 	atrasoCamera[posIndex][0] = posisaoX;
 	atrasoCamera[posIndex][1] = posisaoY;
 	atrasoCamera[posIndex][2] = posisaoZ;
-
 	
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
-
 	float ratio = (float)WinX / WinY;
+
 	int dirCamera = 1;
 	// set the camera using a function similar to gluLookAt
 	switch (camera) {
@@ -2076,6 +2159,11 @@ void renderScene(void) {
 
 	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
+
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_EQUAL, 0x0, 0x0);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
 	respawnaAviao();
 
 	applyRotation();
@@ -2107,6 +2195,55 @@ void renderScene(void) {
 	/*	rotLCam = rotasaoLado;
 		rotCCam = rotasaoCima;
 	}*/
+
+	//Minimapa
+	if (camera == 3) {
+		//glDisable(GL_DEPTH_TEST);
+		glViewport(WinX - WinX / 6, WinY / 36, WinX / 5, WinY / 5);
+		loadIdentity(VIEW);
+		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoY - 10 * sin((rotasaoCima)*PI / 180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoX, posisaoY, posisaoZ, 0, 1, 0);
+		loadIdentity(PROJECTION);
+		perspective(53.13f, ratio, 0.1f, 1000.0f);
+
+		renderMiniMapa();
+		loadIdentity(VIEW);
+		lookAt(posisaoX, 200, posisaoZ, posisaoX, 0.0f, posisaoZ, 1, 0, 0);
+		loadIdentity(PROJECTION);
+		ortho(-40 * ratio, 40 * ratio, -40, 40, -500, 500);
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_EQUAL, 0x1, 0x1);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+		glDisable(GL_DEPTH_TEST);
+
+		renderChao();
+
+		renderCity();
+
+		renderSigns();
+
+		renderAros();
+
+		renderTorre();
+
+		//renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
+		renderAviaoCone(posisaoX, posisaoY, posisaoZ, rotasaoLado);
+
+		renderAviao(posisaoXUm, posisaoYUm, posisaoZUm, rotasaoCimaUm, rotasaoLadoUm, 0.0f, 0.0f);
+
+		renderAviao(posisaoXDois, posisaoYDois, posisaoZDois, rotasaoCimaDois, rotasaoLadoDois, 0.0f, 0.0f);
+
+		renderAviao(posisaoXTres, posisaoYTres, posisaoZTres, rotasaoCimaTres, rotasaoLadoTres, 0.0f, 0.0f);
+
+		updateMisseis();
+
+		updateMisseisInimigos();
+
+		glDisable(GL_STENCIL_TEST);
+		glEnable(GL_DEPTH_TEST);
+		glViewport(0, 0, WinX, WinY);
+		//ACABOU MINIMAPA
+	}
 
 	multMatrixPoint(VIEW, spotLights, res);
 	glUniform4fv(spotLight1, 1, res);
