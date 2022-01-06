@@ -210,6 +210,11 @@ int luzIndice = 0;
 int mudaLuz = -1;
 int luzSpot = 0;
 
+//delta de tempo para nao prender velocidade a framerate
+float oldTimeSinceStart = 0;
+float timeSinceStart = 0;
+float deltaTime = 0;
+
 
 //signs
 #define N_SIGNS 50
@@ -1191,9 +1196,9 @@ void updateMisseis() {
 
 				//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
 
-				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180);
-				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180);
-				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180);
+				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
 			}
 		}
 }
@@ -1815,7 +1820,7 @@ void handleCollisions() {
 	}
 
 	if (checkaColisaoComAros()) {
-		acelerasao += 0.03f;
+		acelerasao += 0.03f * deltaTime * 100;
 	}
 
 }
@@ -1939,6 +1944,11 @@ void renderScene(void) {
 
 	//printf("%f\n", rotasaoLado);
 
+	timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
+	deltaTime = timeSinceStart - oldTimeSinceStart;
+	deltaTime = deltaTime / 1000;
+	oldTimeSinceStart = timeSinceStart;
+
 	FrameCount++;
 	missilTimer++;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1979,11 +1989,11 @@ void renderScene(void) {
 	}
 
 	if (estaAcelerar && acelerasao < 2.0f) {
-		acelerasao += 0.05f;
+		acelerasao += 0.05f * deltaTime * 100;
 	}
 	else {
 		if (acelerasao > 0.0f) {
-			acelerasao -= 0.005f;
+			acelerasao -= 0.005f * deltaTime * 100;
 		}
 	}
 
@@ -2251,23 +2261,23 @@ void renderScene(void) {
 	glUniform4fv(spotDirection, 1, res);
 	
 	if (!bateu && !paraAviao) {
-		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180);
-		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180);
-		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180);
+		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
+		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180) * deltaTime * 100;
+		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
 	}
 
-	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180);
-	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180);
-	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180);
+	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 
 
-	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180);
-	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180);
-	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180);
+	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 
-	posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180);
-	posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180);
-	posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180);
+	posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+	posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+	posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 	
 	heatSeek();
 
