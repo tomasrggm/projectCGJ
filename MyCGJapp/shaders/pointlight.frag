@@ -76,7 +76,7 @@ void main() {
 	float intSpec;
 	vec4 resultado = vec4(0.0);
 	float dist, attenuation;
-	float l_spotCutOff = 0.995f;
+	float l_spotCutOff = 0.997f;
 	vec4 l_spotDir = vec4(0.0,0.0,-1.0,1.0);
 	
 	if (intensity > 0.0) {

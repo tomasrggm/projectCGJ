@@ -2,6 +2,7 @@
 
 uniform mat4 m_pvm;
 uniform mat4 m_viewModel;
+uniform mat4 m_model;
 uniform mat3 m_normal;
 
 uniform vec4 l_pos;
@@ -59,6 +60,7 @@ out vec4 pos;
 void main () {
 
 	pos = m_viewModel * position;
+	vec4 posLuz = m_pvm * position;
 
 	DataOut.normal = normalize(m_normal * normal.xyz);
 	if(dia == 1){

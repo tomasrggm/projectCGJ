@@ -70,6 +70,7 @@ extern float mNormal3x3[9];
 GLint texMode_uniformId;
 GLint pvm_uniformId;
 GLint vm_uniformId;
+GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
@@ -274,6 +275,7 @@ void drawMesh(int objId) {
 	// send matrices to OGL
 	computeDerivedMatrix(PROJ_VIEW_MODEL);
 	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(m_uniformId, 1, GL_FALSE, mMatrix[MODEL]);
 	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
 	computeNormalMatrix3x3();
 	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
@@ -329,6 +331,8 @@ void carroDaBofia() {
 		luzesLocais[12][2] -= 2.0f;
 	}
 }
+
+//Verifica se o avião está dentro das boundaries da cidade
 
 void respawnaAviao() {
 	if (posisaoX < 0.0f) {
@@ -397,6 +401,12 @@ void applyRotation() {
 	}
 	if (rotasaoCima < 0) {
 		rotasaoCima = 360.0f;
+	}
+	if (rotasaoLado > 360.0f) {
+		rotasaoLado = 0.0f;
+	}
+	if (rotasaoLado < 0) {
+		rotasaoLado = 360.0f;
 	}
 }
 
@@ -581,21 +591,41 @@ void atualizaInimigo(int inimigo) {
 		rotasaoLadoUm = (float)(rand() % 360);
 		rotasaoCimaUm = (float)(rand() % 360);
 		posisaoXUm =(float) (rand() % 1000);
-		posisaoYUm = (float)(rand() % 150 + 150);
+		if (minigame) {
+			posisaoYUm = 200.0f;
+			rotasaoCimaUm = 0.0f;
+		}
+		else {
+			posisaoYUm = (float)(rand() % 150 + 150);
+			rotasaoCimaUm = (float)(rand() % 360);
+		}
 		posisaoZUm =(float)(rand() % 1000);
 		break;
 	case 2:
 		rotasaoLadoDois = (float)(rand() % 360);
 		rotasaoCimaDois = (float)(rand() % 360);
 		posisaoXDois = (float)(rand() % 1000);
-		posisaoYDois = (float)(rand() % 150 + 150);
+		if (minigame) {
+			posisaoYDois = 200.0f;
+			rotasaoCimaDois = 0.0f;
+		}
+		else {
+			posisaoYDois = (float)(rand() % 150 + 150);
+			rotasaoCimaDois = (float)(rand() % 360);
+		}
 		posisaoZDois = (float)(rand() % 1000);
 		break;
 	case 3:
 		rotasaoLadoTres = (float)(rand() % 360);
-		rotasaoCimaTres = (float)(rand() % 360);
 		posisaoXTres = (float)(rand() % 1000);
-		posisaoYTres = (float)(rand() % 150 + 150);
+		if (minigame) {
+			posisaoYTres = 200.0f;
+			rotasaoCimaTres = 0.0f;
+		}
+		else {
+			rotasaoCimaTres = (float)(rand() % 360);
+			posisaoYTres = (float)(rand() % 150 + 150);
+		}
 		posisaoZTres = (float)(rand() % 1000);
 		break;
 	}
@@ -977,6 +1007,7 @@ void renderCity() {
 
 				//POSSIVEL TETO DO PREDIO (IMPORTANTE)
 				// send the material
+				/*
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 				glUniform4fv(loc, 1, myMeshes[5].mat.ambient);
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
@@ -993,7 +1024,7 @@ void renderCity() {
 
 				drawMesh(5);
 
-				popMatrix(MODEL);
+				popMatrix(MODEL);*/
 			}
 		}
 	}
@@ -1367,6 +1398,38 @@ float clamp(float value, float min, float max) {
 }
 
 void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, float posY, float posZ) {
+
+	//atualiza o quad das asas do aviao
+	glm::vec4 newvertEsq = aabb->luzEsq;
+	glm::vec4 newvertDir = aabb->luzDir;
+	glm::mat4 transLuz;
+
+	//printf("%f\n", rotasaoLado*180/PI);
+
+	/*
+	transLuz = glm::mat4(1.0f);
+	transLuz = glm::rotate(transLuz, rotPlaneH, glm::vec3(1.0,0.0,0.0));
+	newvertEsq = transLuz * newvertEsq;
+	newvertDir = transLuz * newvertDir;*/
+
+	transLuz = glm::mat4(1.0f);
+	transLuz = glm::rotate(transLuz, rotasaoCima, glm::vec3(rotasaoLado / 360.0, 0.0, (360.0 - rotasaoLado) / 360.0));
+	newvertEsq = transLuz * newvertEsq;
+	newvertDir = transLuz * newvertDir;
+
+	transLuz = glm::mat4(1.0f);
+	transLuz = glm::rotate(transLuz, -rotasaoLado, glm::vec3(0.0, 1.0, 0.0));
+	newvertEsq = transLuz * newvertEsq;
+	newvertDir = transLuz * newvertDir;
+
+	transLuz = glm::mat4(1.0f);
+	transLuz = glm::translate(transLuz, glm::vec3(posX, posY, posZ));
+	newvertEsq = transLuz * newvertEsq;
+	newvertDir = transLuz * newvertDir;
+
+	aabb->luzEsquerda = newvertEsq;
+	aabb->luzDireita = newvertDir;
+
 	//atualiza o quad do corpo do aviao
 	glm::vec4 newvert1 = aabb->vert1;
 	glm::vec4 newvert2 = aabb->vert2;
@@ -1940,6 +2003,9 @@ void heatSeek()
 
 void renderScene(void) {
 
+	//printf("LuzEsq: %f, %f, %f\n", aabb.luzEsquerda[0], aabb.luzEsquerda[1], aabb.luzEsquerda[2]);
+	//printf("LuzDir: %f, %f, %f\n", aabb.luzDireita[0], aabb.luzDireita[1], aabb.luzDireita[2]);
+
 	GLint loc;
 
 	//printf("%f\n", rotasaoLado);
@@ -2013,6 +2079,7 @@ void renderScene(void) {
 	glUniform4fv(corVariavel_loc, 1, corLuz);
 
 	glUniform1i(fogF,fogFlag);
+
 	//atualizar o buffer circular (atraso da camera)
 	camIndex = (camIndex + 1) % 20;
 
@@ -2052,15 +2119,15 @@ void renderScene(void) {
 		loadIdentity(PROJECTION);
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		if (!minigame) {
-		rotasaoCima = 0.0f;
-		rotasaoCimaUm = 0.0f;
-		rotasaoCimaDois = 0.0f;
-		rotasaoCimaTres = 0.0f;
-		posisaoY = 200.0f;
-		posisaoYUm = 200.0f;
-		posisaoYDois = 200.0f;
-		posisaoYTres = 200.0f;
-		minigame = true;
+			rotasaoCima = 0.0f;
+			rotasaoCimaUm = 0.0f;
+			rotasaoCimaDois = 0.0f;
+			rotasaoCimaTres = 0.0f;
+			posisaoY = 200.0f;
+			posisaoYUm = 200.0f;
+			posisaoYDois = 200.0f;
+			posisaoYTres = 200.0f;
+			minigame = true;
 		}
 		break;
 	case 3:
@@ -2159,11 +2226,11 @@ void renderScene(void) {
 		multMatrixPoint(VIEW, luzesLocais[12], res);
 		glUniform4fv(luzLocal13_loc, 1, res);
 
-		float loc14[4] = {posisaoX,posisaoY,posisaoZ-20.0f,1.0f};
+		float loc14[4] = {aabb.luzEsquerda[0],aabb.luzEsquerda[1],aabb.luzEsquerda[2],1.0f};
 		multMatrixPoint(VIEW, loc14, res);
 		glUniform4fv(luzLocal14_loc, 1, res);
 
-		float loc15[4] = { posisaoX,posisaoY,posisaoZ + 20.0f,1.0f };
+		float loc15[4] = {aabb.luzDireita[0],aabb.luzDireita[1],aabb.luzDireita[2],1.0f};
 		multMatrixPoint(VIEW, loc15, res);
 		glUniform4fv(luzLocal15_loc, 1, res);
 
@@ -2247,7 +2314,7 @@ void renderScene(void) {
 
 		updateMisseis();
 
-		updateMisseisInimigos();
+		//updateMisseisInimigos();
 
 		glDisable(GL_STENCIL_TEST);
 		glEnable(GL_DEPTH_TEST);
@@ -2269,7 +2336,6 @@ void renderScene(void) {
 	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
-
 
 	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
@@ -2369,18 +2435,22 @@ void processKeys(unsigned char key, int xx, int yy)
 		p = true;
 		break;
 	case 'w':
-		if (rotPlaneV > -45.0f) {
-			rotPlaneV -= 1.0f;
-			isRotatingV = true;
+		if (!minigame) {
+			if (rotPlaneV > -45.0f) {
+				rotPlaneV -= 1.0f;
+				isRotatingV = true;
+			}
+			q = true;
 		}
-		q = true;
 		break;
 	case 's':
-		if (rotPlaneV < 45.0f) {
-			rotPlaneV += 1.0f;
-			isRotatingV = true;
+		if (!minigame) {
+			if (rotPlaneV < 45.0f) {
+				rotPlaneV += 1.0f;
+				isRotatingV = true;
+			}
+			a = true;
 		}
-		a = true;
 		break;
 	case 'h':
 		estaAcelerar = true;
@@ -2555,6 +2625,7 @@ GLuint setupShaders() {
 	texMode_uniformId = glGetUniformLocation(shader.getProgramIndex(), "texMode");
 	pvm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_pvm");
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
+	m_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_model");
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
 	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos");
 	tex_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap");

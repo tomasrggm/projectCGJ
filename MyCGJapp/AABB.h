@@ -2,6 +2,13 @@
 #include <glm/glm.hpp>
 
 struct AABB {
+	//Pontos para as luzes
+	glm::vec4 luzEsquerda = glm::vec4(2.0f, 0.0f, -0.25f, 1.0f);
+	glm::vec4 luzDireita = glm::vec4(2.0f, 0.0f, 0.25f, 1.0f);
+	
+	glm::vec4 luzEsq = glm::vec4(2.0f, 0.0f, -4.25f, 1.0f);
+	glm::vec4 luzDir = glm::vec4(2.0f, 0.0f, 4.25f, 1.0f);
+
 	//Colliding box po cabeso
 	
 	glm::vec4 v1 = glm::vec4(2.0f, 0.0f, -0.25f, 1.0f);
