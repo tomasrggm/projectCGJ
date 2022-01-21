@@ -1886,7 +1886,11 @@ void handleCollisions() {
 	}
 
 	if (checkaColisaoComAros()) {
+<<<<<<< HEAD
 		acelerasao += 0.02f * deltaTime * 100;
+=======
+		acelerasao += 0.03f * deltaTime * 100;
+>>>>>>> 49833ba92134b889ce74edfe0c2681f9df006bb4
 	}
 
 }
@@ -2354,11 +2358,19 @@ void renderScene(void) {
 	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+<<<<<<< HEAD
 
 	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 
+=======
+
+	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+
+>>>>>>> 49833ba92134b889ce74edfe0c2681f9df006bb4
 	posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 	posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 	posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;

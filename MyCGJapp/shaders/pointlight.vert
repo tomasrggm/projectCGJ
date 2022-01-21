@@ -60,7 +60,11 @@ out vec4 pos;
 void main () {
 
 	pos = m_viewModel * position;
+<<<<<<< HEAD
 	vec4 posLuz = m_model * position;
+=======
+	vec4 posLuz = m_pvm * position;
+>>>>>>> 49833ba92134b889ce74edfe0c2681f9df006bb4
 
 	DataOut.normal = normalize(m_normal * normal.xyz);
 	if(dia == 1){

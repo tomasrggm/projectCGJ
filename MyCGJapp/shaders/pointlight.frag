@@ -78,7 +78,11 @@ void main() {
 	vec4 resultado = vec4(0.0);
 	float dist, attenuation;
 	float l_spotCutOff = 0.997f;
+<<<<<<< HEAD
 	vec4 l_spotDir = spotLightDirection;
+=======
+	vec4 l_spotDir = vec4(0.0,0.0,-1.0,1.0);
+>>>>>>> 49833ba92134b889ce74edfe0c2681f9df006bb4
 	
 	if (intensity > 0.0) {
 
