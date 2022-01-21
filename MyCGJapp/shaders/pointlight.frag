@@ -300,6 +300,13 @@ void main() {
 			}else{
 				colorOut = vec4(1.0,0.9,0.95,1.0);
 			}
+	}else if(texMode == 12){//outros aviones
+			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			if(dia == 1){
+				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
+			}else{
+				colorOut = vec4(0.51,0.93,1.0,1.0);
+			}
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);

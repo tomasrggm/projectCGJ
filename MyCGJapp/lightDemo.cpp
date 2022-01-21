@@ -101,6 +101,7 @@ float rotasaoLado = 0.0f;
 float rotasaoCima = 0.0f;
 float acelerasao = 0.0f;
 bool paraAviao = false;
+bool nossoAviao = false;
 
 //variaveis para os avioes inimigos
 float posisaoXUm = posisaoX;
@@ -469,7 +470,13 @@ void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCi
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 4; ++j) {
 			int use = 0;
-			glUniform1i(texMode_uniformId, 11);
+			if (nossoAviao) {
+				glUniform1i(texMode_uniformId, 11);
+			}
+			else {
+				glUniform1i(texMode_uniformId, 12);
+			}
+
 
 			if (objId > 7)
 				continue;
@@ -501,7 +508,20 @@ void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCi
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 			glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-			glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+			if (!nossoAviao) {
+				if (objId == 1) {
+					float dif[4] = { 0.8f, 0.0f, 0.6, 1.0 };
+					glUniform4fv(loc, 1, dif);
+				}
+				else {
+					float dif[4] = { 0.78f, 0.98f, 1.0, 1.0 };
+					glUniform4fv(loc, 1, dif);
+				}
+			}
+			else {
+				glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+			}
+			
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
 			glUniform4fv(loc, 1, myMeshes[use].mat.specular);
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
@@ -1236,21 +1256,23 @@ void updateMisseis() {
 
 void updateMisseisInimigos() {
 	GLint loc;
+	glUniform1i(texMode_uniformId, 12);
 	for (int j = 0; j < 3; j++) {
 		for (int i = 0; i < N_MISSEIS_MAX; i++) {
+			//printf("Missil %d: %f %f %f %f %f\n", i, infoMisseisUm[i][0], infoMisseisUm[i][1], infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
+			// send the material
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+			glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			float dif[4] = { 0.0f, 0.81f, 0.9f, 1.0f };
+			glUniform4fv(loc, 1, dif);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+			glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+			glUniform1f(loc, myMeshes[3].mat.shininess);
+			pushMatrix(MODEL);
 			if (j == 0) {
 			if (infoMisseisUm[i][3] != 0.0f) {
-				//printf("Missil %d: %f %f %f %f %f\n", i, infoMisseisUm[i][0], infoMisseisUm[i][1], infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
-				// send the material
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-				glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-				glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-				glUniform4fv(loc, 1, myMeshes[3].mat.specular);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-				glUniform1f(loc, myMeshes[3].mat.shininess);
-				pushMatrix(MODEL);
 
 				translate(MODEL, infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
 				rotate(MODEL, -infoMisseisUm[i][0], 0, 1, 0);
@@ -1279,16 +1301,6 @@ void updateMisseisInimigos() {
 			}
 			if (j == 1) {
 				if (infoMisseisDois[i][3] != 0.0f) {
-					// send the material
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-					glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-					glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-					glUniform4fv(loc, 1, myMeshes[3].mat.specular);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-					glUniform1f(loc, myMeshes[3].mat.shininess);
-					pushMatrix(MODEL);
 
 					translate(MODEL, infoMisseisDois[i][2], infoMisseisDois[i][3], infoMisseisDois[i][4]);
 					rotate(MODEL, -infoMisseisDois[i][0], 0, 1, 0);
@@ -1316,16 +1328,6 @@ void updateMisseisInimigos() {
 			}
 			if (j == 2) {
 				if (infoMisseisTres[i][3] != 0.0f) {
-					// send the material
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-					glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-					glUniform4fv(loc, 1, myMeshes[3].mat.diffuse);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-					glUniform4fv(loc, 1, myMeshes[3].mat.specular);
-					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-					glUniform1f(loc, myMeshes[3].mat.shininess);
-					pushMatrix(MODEL);
 
 					translate(MODEL, infoMisseisTres[i][2], infoMisseisTres[i][3], infoMisseisTres[i][4]);
 					rotate(MODEL, -infoMisseisTres[i][0], 0, 1, 0);
@@ -2244,9 +2246,11 @@ void renderScene(void) {
 	respawnaAviao();
 
 	applyRotation();
-
+	//nosso
+	nossoAviao = true;
 	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
 
+	nossoAviao = false;
 	renderAviao(posisaoXUm, posisaoYUm, posisaoZUm, rotasaoCimaUm, rotasaoLadoUm, 0.0f, 0.0f);
 
 	renderAviao(posisaoXDois, posisaoYDois, posisaoZDois, rotasaoCimaDois, rotasaoLadoDois, 0.0f, 0.0f);
