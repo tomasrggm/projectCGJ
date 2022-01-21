@@ -29,6 +29,7 @@ uniform vec4 corVariavel;
 uniform int dia;
 uniform int luzBofia;
 uniform int spotlightOn; //0 ligadas 1 desligadas
+uniform vec4 spotLightDirection;
 
 in vec3 lLocalDir1;
 in vec3 lLocalDir2;
@@ -76,8 +77,8 @@ void main() {
 	float intSpec;
 	vec4 resultado = vec4(0.0);
 	float dist, attenuation;
-	float l_spotCutOff = 0.995f;
-	vec4 l_spotDir = vec4(0.0,0.0,-1.0,1.0);
+	float l_spotCutOff = 0.997f;
+	vec4 l_spotDir = spotLightDirection;
 	
 	if (intensity > 0.0) {
 
@@ -299,6 +300,13 @@ void main() {
 				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
 			}else{
 				colorOut = vec4(1.0,0.9,0.95,1.0);
+			}
+	}else if(texMode == 12){//outros aviones
+			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			if(dia == 1){
+				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
+			}else{
+				colorOut = vec4(0.51,0.93,1.0,1.0);
 			}
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
