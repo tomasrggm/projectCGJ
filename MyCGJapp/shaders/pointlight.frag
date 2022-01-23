@@ -23,6 +23,7 @@ uniform sampler2D texmap6;
 uniform sampler2D texmap7;
 uniform sampler2D texmap8;
 uniform sampler2D texmap9;
+uniform	sampler2D texUnitDiff;
 
 uniform int pointLights;
 uniform vec4 corVariavel;
@@ -30,6 +31,8 @@ uniform int dia;
 uniform int luzBofia;
 uniform int spotlightOn; //0 ligadas 1 desligadas
 uniform vec4 spotLightDirection;
+uniform int mapa;
+uniform int assimp;
 
 in vec3 lLocalDir1;
 in vec3 lLocalDir2;
@@ -214,7 +217,7 @@ void main() {
 				
 			}
 	}
-	if(spotlightOn == 0){
+	if(spotlightOn == 0 && mapa == 0){
 			float intensity = 0.0;
 			vec4 spec = vec4(0.0);
 			vec3 ld = normalize(lLocalDir14);
@@ -313,6 +316,7 @@ void main() {
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 	}
 
+	//Luz neon para os billboards
 	if(texMode > 2 && texMode < 10 && dia==0){
         colorOut = vec4(max(resultado.rgb * texel.rgb * texel1.rgb + spec.rgb, texel.rgb*texel1.rgb), 1.0);
         colorOut = colorOut * vec4(2.0,2.0,2.0,1.0);
@@ -320,6 +324,17 @@ void main() {
         colorOut = vec4(max(resultado.rgb * texel.rgb * texel1.rgb + spec.rgb, texel.rgb*texel1.rgb), 1.0);
         colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
     }
+
+	//Comboio assimp
+	if(assimp == 1 && dia == 1){
+		texel = texture(texUnitDiff, DataIn.tex_coord);
+		colorOut = vec4(max(resultado.rgb*texel.rgb + spec.rgb,  mat.ambient.rgb  + 0.1*texel.rgb), 1.0);	
+	}
+	else if(assimp == 1 && dia == 0){ //Luz neon para o comboio
+		texel = texture(texUnitDiff, DataIn.tex_coord);
+		colorOut = vec4(max(resultado.rgb*texel.rgb + spec.rgb,  mat.ambient.rgb  + 0.1*texel.rgb), 1.0);
+		colorOut = colorOut * vec4(8.0,8.0,8.0,1.0);
+	}
 
 	if(fogFlag == 1){
 		vec3 fogColor = vec3(0.5,0.6,0.7);

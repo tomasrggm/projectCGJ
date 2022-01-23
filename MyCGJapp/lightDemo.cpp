@@ -15,11 +15,17 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <fstream>
 #include <time.h>
 
 // include GLEW to access OpenGL 3.3 functions
 #include <GL/glew.h>
 
+// assimp include files. These three are usually needed.
+#include "assimp/Importer.hpp"	//OO version Header!
+#include "assimp/scene.h"
+
+using namespace std;
 
 // GLUT is the toolkit to interface with the OS
 #include <GL/freeglut.h>
@@ -36,15 +42,28 @@
 #include "VertexAttrDef.h"
 #include "geometry.h"
 #include "Texture_Loader.h"
+#include "meshFromAssimp.h"
 #include "AABB.h"
 
 #include "avtFreeType.h"
 
 using namespace std;
 
+/* IMPORTANT: Use the next data to make this Assimp demo to work*/
+
+// Created an instance of the Importer class in the meshFromAssimp.cpp file
+extern Assimp::Importer importer;
+// the global Assimp scene object
+extern const aiScene* scene;
+//char model_dir[50];  //initialized by the user input at the console
+char model_dir[] = { 'T', 'r', 'a', 'i', 'n', 's' };
+// scale factor for the Assimp model to fit in the window
+extern float scaleFactor;
+
 #define CAPTION "Tokyo drift"
 int WindowHandle = 0;
 int WinX = 1024, WinY = 576;
+
 
 unsigned int FrameCount = 0;
 
@@ -57,6 +76,7 @@ const string font_name = "fonts/arial.ttf";
 
 //Vector with meshes
 vector<struct MyMesh> myMeshes;
+vector<struct MyMesh> myMeshes2; //para o assimp
 
 //External array storage defined in AVTmathLib.cpp
 
@@ -81,6 +101,8 @@ GLint pointLights;
 GLint corVariavel_loc;
 GLint luzBofia_loc;
 GLint spotLightDir_loc;
+GLint mapa;
+GLint assimp;
 
 GLuint TextureArray[10];
 
@@ -101,7 +123,7 @@ float posisaoZ = 0.0f;
 float rotasaoLado = 0.0f;
 float rotasaoCima = 0.0f;
 float acelerasao = 0.0f;
-bool paraAviao = false;
+bool pause = false;
 bool nossoAviao = false;
 
 //variaveis para os avioes inimigos
@@ -122,6 +144,9 @@ float posisaoYTres = posisaoY;
 float posisaoZTres = posisaoZ;
 float rotasaoLadoTres = 0.0f;
 float rotasaoCimaTres = 0.0f;
+
+//spide do comboio
+float posicaoComboio = 0.0f;
 
 //variaveis criadas para a spotLight
 float spotLights[4] = { 0.0f,0.0f,0.0f, 1.0f};
@@ -170,6 +195,7 @@ AABB aabbUm;
 AABB aabbDois;
 AABB aabbTres;
 
+int desenhaMapa = 0;
 int diaLigado = 1;
 int pointLightsLigadas = 0;
 int rotasaoLampada = 0;
@@ -1247,10 +1273,11 @@ void updateMisseis() {
 				popMatrix(MODEL);
 
 				//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
-
-				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				if (!pause) {
+					infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+					infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+					infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				}
 			}
 		}
 }
@@ -1287,10 +1314,12 @@ void updateMisseisInimigos() {
 				popMatrix(MODEL);
 
 				//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
-
-				infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
-				infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
-				infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+				
+				if (!pause) {
+					infoMisseisUm[i][2] += 0.5f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+					infoMisseisUm[i][3] += 0.5f * sin(infoMisseisUm[i][1] * PI / 180);
+					infoMisseisUm[i][4] += 0.5f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+				}
 			}
 			if (infoMisseisUm[i][3] < 0.0f) {
 				infoMisseisUm[i][0] = 0.0f;
@@ -1314,10 +1343,11 @@ void updateMisseisInimigos() {
 					popMatrix(MODEL);
 
 					//printf("rotL: %f  rotC: %f", infoMisseisDois[0][0], infoMisseisDois[0][1]);
-
-					infoMisseisDois[i][2] += 1.0f * cos(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
-					infoMisseisDois[i][3] += 1.0f * sin(infoMisseisDois[i][1] * PI / 180);
-					infoMisseisDois[i][4] += 1.0f * sin(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
+					if (!pause) {
+						infoMisseisDois[i][2] += 1.0f * cos(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
+						infoMisseisDois[i][3] += 1.0f * sin(infoMisseisDois[i][1] * PI / 180);
+						infoMisseisDois[i][4] += 1.0f * sin(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
+					}
 				}
 				if (infoMisseisDois[i][3] < 0.0f) {
 					infoMisseisDois[i][0] = 0.0f;
@@ -1341,10 +1371,11 @@ void updateMisseisInimigos() {
 					popMatrix(MODEL);
 
 					//printf("rotL: %f  rotC: %f", infoMisseisTres[0][0], infoMisseisTres[0][1]);
-
-					infoMisseisTres[i][2] += 1.0f * cos(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
-					infoMisseisTres[i][3] += 1.0f * sin(infoMisseisTres[i][1] * PI / 180);
-					infoMisseisTres[i][4] += 1.0f * sin(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
+					if (!pause) {
+						infoMisseisTres[i][2] += 1.0f * cos(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
+						infoMisseisTres[i][3] += 1.0f * sin(infoMisseisTres[i][1] * PI / 180);
+						infoMisseisTres[i][4] += 1.0f * sin(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
+					}
 				}
 				if (infoMisseisTres[i][3] < 0.0f) {
 					infoMisseisTres[i][0] = 0.0f;
@@ -1998,6 +2029,123 @@ void heatSeek()
 	//=============================
 }
 
+void aiRecursive_render(const aiScene* sc, const aiNode* nd)
+{
+	GLint loc;
+
+	// Get node transformation matrix
+	aiMatrix4x4 m = nd->mTransformation;
+	// OpenGL matrices are column major
+	m.Transpose();
+
+	// save model matrix and apply node transformation
+	pushMatrix(MODEL);
+
+	float aux[16];
+	memcpy(aux, &m, sizeof(float) * 16);
+	multMatrix(MODEL, aux);
+
+
+	// draw all meshes assigned to this node
+	for (unsigned int n = 0; n < nd->mNumMeshes; ++n) {
+
+		// send the material
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+		glUniform4fv(loc, 1, myMeshes2[nd->mMeshes[n]].mat.ambient);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+		glUniform4fv(loc, 1, myMeshes2[nd->mMeshes[n]].mat.diffuse);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+		glUniform4fv(loc, 1, myMeshes2[nd->mMeshes[n]].mat.specular);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.emissive");
+		glUniform4fv(loc, 1, myMeshes2[nd->mMeshes[n]].mat.emissive);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+		glUniform1f(loc, myMeshes2[nd->mMeshes[n]].mat.shininess);
+		loc = glGetUniformLocation(shader.getProgramIndex(), "mat.texCount");
+		glUniform1i(loc, myMeshes2[nd->mMeshes[n]].mat.texCount);
+
+		unsigned int  diffMapCount = 0;  //read 2 diffuse textures
+
+		//devido ao fragment shader suporta 2 texturas difusas simultaneas, 1 especular e 1 normal map
+
+		//glUniform1i(normalMap_loc, false);   //GLSL normalMap variable initialized to 0
+		//glUniform1i(specularMap_loc, false);
+		//glUniform1ui(diffMapCount_loc, 0);
+
+		if (myMeshes2[nd->mMeshes[n]].mat.texCount != 0)
+			for (unsigned int i = 0; i < myMeshes2[nd->mMeshes[n]].mat.texCount; ++i) {
+				if (myMeshes2[nd->mMeshes[n]].texTypes[i] == DIFFUSE) {
+					if (diffMapCount == 0) {
+						diffMapCount++;
+						loc = glGetUniformLocation(shader.getProgramIndex(), "texUnitDiff");
+						glUniform1i(loc, myMeshes2[nd->mMeshes[n]].texUnits[i]);
+						//glUniform1ui(diffMapCount_loc, diffMapCount);
+					}
+					else if (diffMapCount == 1) {
+						diffMapCount++;
+						loc = glGetUniformLocation(shader.getProgramIndex(), "texUnitDiff1");
+						glUniform1i(loc, myMeshes2[nd->mMeshes[n]].texUnits[i]);
+						//glUniform1ui(diffMapCount_loc, diffMapCount);
+					}
+					else printf("Only supports a Material with a maximum of 2 diffuse textures\n");
+				}
+				else if (myMeshes2[nd->mMeshes[n]].texTypes[i] == SPECULAR) {
+					loc = glGetUniformLocation(shader.getProgramIndex(), "texUnitSpec");
+					glUniform1i(loc, myMeshes2[nd->mMeshes[n]].texUnits[i]);
+					//glUniform1i(specularMap_loc, true);
+				}
+				else if (myMeshes2[nd->mMeshes[n]].texTypes[i] == NORMALS) { //Normal map
+					loc = glGetUniformLocation(shader.getProgramIndex(), "texUnitNormalMap");
+					//if (normalMapKey)
+					//	glUniform1i(normalMap_loc, normalMapKey);
+					glUniform1i(loc, myMeshes2[nd->mMeshes[n]].texUnits[i]);
+
+				}
+				else printf("Texture Map not supported\n");
+			}
+
+		// send matrices to OGL
+		computeDerivedMatrix(PROJ_VIEW_MODEL);
+		glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+		glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+		computeNormalMatrix3x3();
+		glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+		// bind VAO
+		glBindVertexArray(myMeshes2[nd->mMeshes[n]].vao);
+
+		if (!shader.isProgramValid()) {
+			printf("Program Not Valid!\n");
+			exit(1);
+		}
+		// draw
+		glDrawElements(myMeshes2[nd->mMeshes[n]].type, myMeshes2[nd->mMeshes[n]].numIndexes, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+
+	// draw all children
+	for (unsigned int n = 0; n < nd->mNumChildren; ++n) {
+		aiRecursive_render(sc, nd->mChildren[n]);
+	}
+	popMatrix(MODEL);
+}
+
+void renderObjetoAssimp() {
+	glUniform1i(assimp, 1);
+	// sets the model matrix to a scale matrix so that the model fits in the window
+	pushMatrix(MODEL);
+	translate(MODEL, 86, 5, posicaoComboio);
+	scale(MODEL, scaleFactor*10, scaleFactor*10, scaleFactor*10);
+	rotate(MODEL, 90, 0, 1, 0);
+
+	aiRecursive_render(scene, scene->mRootNode);
+	glUniform1i(assimp, 0);
+	posicaoComboio -= 0.5f;
+	if (posicaoComboio < 0.0f) {
+		posicaoComboio = 1050.0f;
+	}
+	popMatrix(MODEL);
+}
+
 // ------------------------------------------------------------
 //
 // Render stufff
@@ -2019,50 +2167,52 @@ void renderScene(void) {
 	oldTimeSinceStart = timeSinceStart;
 
 	FrameCount++;
-	missilTimer++;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// load identity matrices
 	loadIdentity(VIEW);
 	loadIdentity(MODEL);
 
-	if (missilTimer == 20) {
-		//printf("ola1 %f\n", posisaoYUm);
-		infoMisseisUm[missilIndexUm][0] = rotasaoLadoUm;
-		infoMisseisUm[missilIndexUm][1] = rotasaoCimaUm;
-		infoMisseisUm[missilIndexUm][2] = posisaoXUm;
-		infoMisseisUm[missilIndexUm][3] = posisaoYUm;
-		infoMisseisUm[missilIndexUm][4] = posisaoZUm;
-		//printf("rL:%f rC:%f pX:%f pY:%f pZ:%f", infoMisseis[missilIndexUm][0], infoMisseis[missilIndexUm][1], infoMisseis[missilIndexUm][2], infoMisseis[missilIndexUm][3], infoMisseis[missilIndexUm][4]);
-		missilIndexUm = (missilIndexUm + 1) % N_MISSEIS_MAX;
-	}
-	else if (missilTimer == 40) {
-		//printf("ola2 %f\n", posisaoYDois);
-		infoMisseisDois[missilIndexDois][0] = rotasaoLadoDois;
-		infoMisseisDois[missilIndexDois][1] = rotasaoCimaDois;
-		infoMisseisDois[missilIndexDois][2] = posisaoXDois;
-		infoMisseisDois[missilIndexDois][3] = posisaoYDois;
-		infoMisseisDois[missilIndexDois][4] = posisaoZDois;
-		missilIndexDois = (missilIndexDois + 1) % N_MISSEIS_MAX;
-	}
-	else if (missilTimer == 60) {
-		//printf("ola3 %f\n", posisaoYTres);
-		infoMisseisTres[missilIndexTres][0] = rotasaoLadoTres + 0.0f;
-		infoMisseisTres[missilIndexTres][1] = rotasaoCimaTres + 0.0f;
-		infoMisseisTres[missilIndexTres][2] = posisaoXTres + 0.0f;
-		infoMisseisTres[missilIndexTres][3] = posisaoYTres + 0.0f;
-		infoMisseisTres[missilIndexTres][4] = posisaoZTres + 0.0f;
-		missilIndexTres = (missilIndexTres + 1) % N_MISSEIS_MAX;
-	}
-	if (missilTimer == 60) {
-		missilTimer = 0;
-	}
+	if (!pause) {
+		missilTimer++;
+		if (missilTimer == 20) {
+			//printf("ola1 %f\n", posisaoYUm);
+			infoMisseisUm[missilIndexUm][0] = rotasaoLadoUm;
+			infoMisseisUm[missilIndexUm][1] = rotasaoCimaUm;
+			infoMisseisUm[missilIndexUm][2] = posisaoXUm;
+			infoMisseisUm[missilIndexUm][3] = posisaoYUm;
+			infoMisseisUm[missilIndexUm][4] = posisaoZUm;
+			//printf("rL:%f rC:%f pX:%f pY:%f pZ:%f", infoMisseis[missilIndexUm][0], infoMisseis[missilIndexUm][1], infoMisseis[missilIndexUm][2], infoMisseis[missilIndexUm][3], infoMisseis[missilIndexUm][4]);
+			missilIndexUm = (missilIndexUm + 1) % N_MISSEIS_MAX;
+		}
+		else if (missilTimer == 40) {
+			//printf("ola2 %f\n", posisaoYDois);
+			infoMisseisDois[missilIndexDois][0] = rotasaoLadoDois;
+			infoMisseisDois[missilIndexDois][1] = rotasaoCimaDois;
+			infoMisseisDois[missilIndexDois][2] = posisaoXDois;
+			infoMisseisDois[missilIndexDois][3] = posisaoYDois;
+			infoMisseisDois[missilIndexDois][4] = posisaoZDois;
+			missilIndexDois = (missilIndexDois + 1) % N_MISSEIS_MAX;
+		}
+		else if (missilTimer == 60) {
+			//printf("ola3 %f\n", posisaoYTres);
+			infoMisseisTres[missilIndexTres][0] = rotasaoLadoTres + 0.0f;
+			infoMisseisTres[missilIndexTres][1] = rotasaoCimaTres + 0.0f;
+			infoMisseisTres[missilIndexTres][2] = posisaoXTres + 0.0f;
+			infoMisseisTres[missilIndexTres][3] = posisaoYTres + 0.0f;
+			infoMisseisTres[missilIndexTres][4] = posisaoZTres + 0.0f;
+			missilIndexTres = (missilIndexTres + 1) % N_MISSEIS_MAX;
+		}
+		if (missilTimer == 60) {
+			missilTimer = 0;
+		}
 
-	if (estaAcelerar && acelerasao < 2.0f) {
-		acelerasao += 0.05f * deltaTime * 100;
-	}
-	else {
-		if (acelerasao > 0.0f) {
-			acelerasao -= 0.005f * deltaTime * 100;
+		if (estaAcelerar && acelerasao < 2.0f) {
+			acelerasao += 0.05f * deltaTime * 100;
+		}
+		else {
+			if (acelerasao > 0.0f) {
+				acelerasao -= 0.005f * deltaTime * 100;
+			}
 		}
 	}
 
@@ -2118,6 +2268,7 @@ void renderScene(void) {
 		ortho(-504 * ratio, 504 * ratio, -504, 504, -1000, 1000);
 		break;
 	case 2:
+		luzSpot = 1;
 		//camera de cima perspetiva
 		lookAt(496.0, 400.0, 496.0, 496.0, 0.0, 496.0, 1, 0, 0);
 		loadIdentity(PROJECTION);
@@ -2149,7 +2300,9 @@ void renderScene(void) {
 	case 4:
 		minigame = false;
 		//TA MAL, FAZER CONTAS
-		lookAt(posisaoX /* + 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180) */ , posisaoY /* - 5 * sin((rotasaoCima)*PI / 180) + 5 * cos(-rotasaoCima * PI / 180)*/, posisaoZ/* + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180)*/, posisaoX + (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) - 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180), posisaoY + 10 * sin((rotasaoCima)*PI / 180) - 5 * cos(-rotasaoCima * PI / 180), posisaoZ + (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) - 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), 0, 1, 0);
+		//lookAt(posisaoX /* + 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180) */ , posisaoY /* - 5 * sin((rotasaoCima)*PI / 180) + 5 * cos(-rotasaoCima * PI / 180)*/, posisaoZ/* + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180)*/, posisaoX + (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) - 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180), posisaoY + 10 * sin((rotasaoCima)*PI / 180) - 5 * cos(-rotasaoCima * PI / 180), posisaoZ + (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) - 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), 0, 1, 0);
+		lookAt(posisaoX + 1 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180), posisaoY + 1 * cos(-rotasaoCima * PI / 180), posisaoZ + 1 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX + (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180))/* - 1 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180)*/, posisaoY + 10 * sin((rotasaoCima)*PI / 180)/* - 1 * cos(-rotasaoCima * PI / 180)*/, posisaoZ + (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180))/* - 1 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180)*/, 0, 1 * dirCamera, 0);
+
 		loadIdentity(PROJECTION);
 		perspective(53.13f, ratio, 0.1f, 1000.0f);
 		break;
@@ -2257,9 +2410,15 @@ void renderScene(void) {
 	glStencilFunc(GL_EQUAL, 0x0, 0x0);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-	respawnaAviao();
+	if (!pause) {
+		respawnaAviao();
 
-	applyRotation();
+		applyRotation();
+	}
+
+	//renderAssimp
+	renderObjetoAssimp();
+
 	//nosso
 	nossoAviao = true;
 	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
@@ -2292,7 +2451,8 @@ void renderScene(void) {
 	}*/
 
 	//Minimapa
-	if (camera == 3) {
+	if (camera == 3 || camera == 4) {
+		glUniform1i(mapa, 1);
 		//glDisable(GL_DEPTH_TEST);
 		glViewport(WinX - WinX / 6, WinY / 36, WinX / 5, WinY / 5);
 		loadIdentity(VIEW);
@@ -2313,6 +2473,9 @@ void renderScene(void) {
 
 		renderChao();
 
+		//renderAssimp
+		renderObjetoAssimp();
+
 		renderCity();
 
 		renderSigns();
@@ -2332,11 +2495,12 @@ void renderScene(void) {
 
 		updateMisseis();
 
-		//updateMisseisInimigos();
+		updateMisseisInimigos();
 
 		glDisable(GL_STENCIL_TEST);
 		glEnable(GL_DEPTH_TEST);
 		glViewport(0, 0, WinX, WinY);
+		glUniform1i(mapa, 0);
 		//ACABOU MINIMAPA
 	}
 
@@ -2345,31 +2509,31 @@ void renderScene(void) {
 	multMatrixPoint(VIEW, spotLightDirection, res);
 	glUniform4fv(spotDirection, 1, res);
 	
-	if (!bateu && !paraAviao) {
+	if (!bateu && !pause) {
 		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
 		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180) * deltaTime * 100;
 		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
-	}
 
-	posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
-	posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
-	posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 
-	posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
-	posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
-	posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 
-	posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
-	posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
-	posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 	
 	heatSeek();
+	}
 
 	atualizaAviaoInfo();
 
 	for (int i = 0; i < 2; ++i) {
 		for (int j = 0; j < 4; ++j) {
-			if (!bateu) {
+			if (!bateu && !pause) {
 				if (!o && !p && (rotPlaneH > 0.3f || rotPlaneH < -0.3f)) {
 					if (rotPlaneH > 0.0f)
 						rotPlaneH -= 0.2f;
@@ -2392,9 +2556,11 @@ void renderScene(void) {
 		glUniform1i(luzBofia_loc, luzBofia);
 	}
 	//renderTexto();
-	carroDaBofia();
+	if (!pause) {
+		carroDaBofia();
+		rodaLuzDeCima();
+	}
 	fazGradienteLuz();
-	rodaLuzDeCima();
 	glutSwapBuffers();
 }
 
@@ -2434,7 +2600,7 @@ void processKeys(unsigned char key, int xx, int yy)
 		}
 		break;
 	case 'p': 
-		paraAviao = !paraAviao;
+		pause = !pause;
 		break;
 	case 'a':
 		if (rotPlaneH > -45.0f) {
@@ -2681,6 +2847,8 @@ GLuint setupShaders() {
 	luzBofia_loc = glGetUniformLocation(shader.getProgramIndex(), "luzBofia");
 	spotlightOn = glGetUniformLocation(shader.getProgramIndex(), "spotlightOn");
 	spotLightDir_loc = glGetUniformLocation(shader.getProgramIndex(), "spotLightDirection");
+	mapa = glGetUniformLocation(shader.getProgramIndex(), "mapa");
+	assimp = glGetUniformLocation(shader.getProgramIndex(), "assimp");
 	
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
@@ -2713,6 +2881,7 @@ void init()
 	}
 	ilInit();
 
+
 	/// Initialization of freetype library with font_name file
 	freeType_init(font_name);
 
@@ -2733,6 +2902,27 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/lidl.jpg", 7);
 	Texture2D_Loader(TextureArray, "textures/beer.jpg", 8);
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
+
+	//---- cenas para assimp ------------------------------------------------
+	std::string filepath = "Trains/Trains.fbx";
+	strcat(model_dir, "/");  //directory path in the VS project
+	//check if file exists
+	ifstream fin(filepath.c_str());
+	if (!fin.fail()) {
+		fin.close();
+	}
+	else {
+		printf("Couldn't open file: %s\n", filepath.c_str());
+	}
+
+	//import 3D file into Assimp scene graph
+	if (!Import3DFromFile(filepath)) {
+		return;
+	}
+
+	//creation of Mymesh array with VAO Geometry and Material
+	myMeshes2 = createMeshFromAssimp(scene);
+	//Acabou-se o assimp
 
 	//Associar os Texture Units aos Objects Texture
 	glActiveTexture(GL_TEXTURE0);

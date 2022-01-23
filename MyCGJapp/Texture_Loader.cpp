@@ -23,8 +23,10 @@ void Texture2D_Loader(unsigned int *textureArray, const char *strFileName, int I
 	// No OGL o texture 2D mapping usa as duas coordenadas de textura s,t assumindo o lower left como origem
 	ilEnable(IL_ORIGIN_SET);
 	ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
-	if (ilLoadImage(strFileName))
+	if (ilLoadImage(strFileName)) {
+		printf("%d\n", ID);
 		printf("2D Texture: Image %s sucessfully loaded.\n", strFileName);
+	}
 	else {
 		printf("2D Texture: ERROR loading image %s.\n", strFileName);
 		exit(0);
