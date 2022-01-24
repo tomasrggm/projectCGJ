@@ -123,7 +123,7 @@ void RenderText(VSShaderLib& shaderText, std::string text, float x, float y, flo
 
 	glUniform3f(glGetUniformLocation(programIndex, "textColor"), cR, cG, cB);
 
-	glActiveTexture(GL_TEXTURE0); //no frag shader o uniform sampler foi carregado com TU0
+	glActiveTexture(GL_TEXTURE31); //no frag shader o uniform sampler foi carregado com TU0
 	glBindVertexArray(VAO);
 
 	// iterate through all characters

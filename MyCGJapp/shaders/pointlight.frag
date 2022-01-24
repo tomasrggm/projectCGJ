@@ -23,6 +23,8 @@ uniform sampler2D texmap6;
 uniform sampler2D texmap7;
 uniform sampler2D texmap8;
 uniform sampler2D texmap9;
+uniform sampler2D texmap10;
+uniform sampler2D texmap11;
 uniform	sampler2D texUnitDiff;
 
 uniform int pointLights;
@@ -311,6 +313,16 @@ void main() {
 			}else{
 				colorOut = vec4(0.51,0.93,1.0,1.0);
 			}
+	}else if (texMode == 13 && assimp == 0 && dia == 1){
+			texel = texture(texmap10, DataIn.tex_coord);  // texel from plane
+			if(texel.a == 0.0) discard;
+			else
+			colorOut =  vec4(texel.rgb, 1.0);
+	}else if (texMode == 13 && assimp == 0 && dia == 0){
+			texel = texture(texmap11, DataIn.tex_coord);  // texel from plane
+			if(texel.a == 0.0) discard;
+			else
+			colorOut =  vec4(texel.rgb, texel.a);
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);

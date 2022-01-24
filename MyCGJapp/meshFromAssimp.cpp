@@ -153,10 +153,10 @@ bool LoadGLTexturesTUs(const aiScene* scene)  // Create OGL textures objects and
 	for (int i = 0; itr != textureIdMap.end(); ++i, ++itr)
 	{
 		filename = (*itr).first;  // get filename
-		glActiveTexture(GL_TEXTURE0 + i+10);
-		Texture2D_Loader(textureIds, filename.c_str(), i+10);  //it already performs glBindTexture(GL_TEXTURE_2D, textureIds[i])
-		(*itr).second = i+10;	  // save texture unit for filename in map
-		printf("textura = %s  TU = %d\n", filename.c_str(), i+10);
+		glActiveTexture(GL_TEXTURE0 + i+99);
+		Texture2D_Loader(textureIds, filename.c_str(), i);  //it already performs glBindTexture(GL_TEXTURE_2D, textureIds[i])
+		(*itr).second = i+99;	  // save texture unit for filename in map
+		printf("textura = %s  TU = %d\n", filename.c_str(), i+99);
 	}
 
 	//Cleanup

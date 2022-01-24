@@ -3,7 +3,7 @@
 in vec2 TexCoords;
 out vec4 color;
 
-layout(binding = 0) uniform sampler2D text;
+layout(binding = 31) uniform sampler2D text;
 uniform vec3 textColor;
 
 void main()

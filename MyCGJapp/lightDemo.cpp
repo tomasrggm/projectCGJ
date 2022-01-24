@@ -94,7 +94,7 @@ GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
-GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9;
+GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11;
 GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
 GLint dia;
 GLint pointLights;
@@ -104,7 +104,7 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[10];
+GLuint TextureArray[12];
 
 //Variaveis fun mode
 bool minigame = false;
@@ -125,6 +125,11 @@ float rotasaoCima = 0.0f;
 float acelerasao = 0.0f;
 bool pause = false;
 bool nossoAviao = false;
+int vidas = 3;
+int pontos = 0;
+int imunidade;
+int pontosCounter;
+bool verAviao;
 
 //variaveis para os avioes inimigos
 float posisaoXUm = posisaoX;
@@ -319,7 +324,54 @@ void drawMesh(int objId) {
 	glBindVertexArray(0);
 }
 
+void desenhaVidas() {
+	GLint loc;
+	int use = 5;
+	float ratio = (float)WinX / WinY;
+	glDisable(GL_DEPTH_TEST);
+	int dir = 1;
+
+	if (rotasaoCima > 90.0 && rotasaoCima < 270) {
+		dir = -1;
+	}
+
+	glViewport(-WinX / 2.2, WinY/2.2, WinX, WinY);
+	loadIdentity(VIEW);
+	lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoY - 10 * sin((rotasaoCima)*PI / 180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoX, posisaoY, posisaoZ, 0, dir, 0);
+	loadIdentity(PROJECTION);
+	perspective(53.13f, ratio, 0.1f, 1000.0f);
+	glEnable(GL_BLEND);
+	glUniform1i(texMode_uniformId, 13);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	for (int i = 0; i < vidas; i++) {
+		pushMatrix(MODEL);
+
+		translate(MODEL, posisaoX, posisaoY, posisaoZ);
+		rotate(MODEL, -rotasaoLado, 0, 1, 0);
+		rotate(MODEL, rotasaoCima, 0, 0, 1);
+		rotate(MODEL, -90, 0, 1, 0);
+		translate(MODEL, i * 1.2, 0, 0);
+		scale(MODEL, 1.2, 1, 1);
+
+		drawMesh(use);
+		popMatrix(MODEL);
+	}
+	glViewport(0, 0, WinX, WinY);
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+}
+
 void renderTexto() {
+	glUseProgram(shaderText.getProgramIndex());
 	//Render text (bitmap fonts) in screen coordinates. So use ortoghonal projection with viewport coordinates.
 	glDisable(GL_DEPTH_TEST);
 	//the glyph contains background colors and non-transparent for the actual character pixels. So we use the blending
@@ -327,7 +379,7 @@ void renderTexto() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	int m_viewport[4];
 	glGetIntegerv(GL_VIEWPORT, m_viewport);
-
+	//printf("%d, %d, %d, %d\n", m_viewport[0], m_viewport[1], m_viewport[2], m_viewport[3]);
 	//viewer at origin looking down at  negative z direction
 	pushMatrix(MODEL);
 	loadIdentity(MODEL);
@@ -336,8 +388,22 @@ void renderTexto() {
 	pushMatrix(VIEW);
 	loadIdentity(VIEW);
 	ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
-	RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
-	RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
+	//RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
+	//RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
+	string msg = "Lives: " + std::to_string(vidas) + "  Points : " + std::to_string(pontos);
+	RenderText(shaderText, msg, 25.0, 25.0, 1.0f, 0.35f, 0.85f, 1.0f);
+	if (vidas == 0) {
+		RenderText(shaderText, "You died", WinX / 2.85, WinY / 2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Press [r] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
+		pause = true;
+	}
+	else if (pause) {
+		RenderText(shaderText, "Game paused", WinX/2.85, WinY/2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Press [p] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
+	}
+
+	glUseProgram(shader.getProgramIndex());
+
 	popMatrix(PROJECTION);
 	popMatrix(VIEW);
 	popMatrix(MODEL);
@@ -971,12 +1037,10 @@ void renderAros() {
 	//}
 	renderAro(0, 0, 1, 2);
 	for (int i = 0; i < 12; i++) {
-		
 		renderAro(448 + i * 48, 40 + i * 48, 4, 50);
 		arosInfo[0 + i][0] = 448 + i * 48;
 		arosInfo[0 + i][1] = 40 + i * 48;
 		arosInfo[0 + i][2] = 4;
-		
 	}
 
 	for (int i = 0; i < 3; i++) {
@@ -1901,18 +1965,47 @@ void handleCollisions() {
 	
 	if (checkaColisaoComMisseisInimigos(&aabb)) {
 		printf("morreu\n");
+		if (imunidade == 0 && vidas > 0) {
+			vidas -= 1;
+			if(vidas > 0)
+			imunidade = 120;
+		}
 	}
+	/* CODIGO PARA SE QUISERMOS QUE O AVIAO PERCA VIDAS AO COLIDIR COM PREDIOS
+	else if (bateu && vidas > 0) {
+		if (imunidade == 0) {
+			vidas -= 1;
+			if (vidas > 0) {
+				imunidade = 120;
+				posisaoX = 0.0f;
+				posisaoY = 125.0f;
+				posisaoZ = 0.0f;
+				rotasaoCima = 0.0f;
+				rotasaoLado = 0.0f;
+			}
+		}
+		else {
+			posisaoX = 0.0f;
+			posisaoY = 125.0f;
+			posisaoZ = 0.0f;
+			rotasaoCima = 0.0f;
+			rotasaoLado = 0.0f;
+		}
+	}*/
 
 	if (checkaColisaoComMisseis(&aabbUm)) {
 		printf("Aviao 1 morto\n");
+		pontos += 44;
 		atualizaInimigo(1);
 	}
 	if (checkaColisaoComMisseis(&aabbDois)) {
 		printf("Aviao 2 morto\n");
+		pontos += 44;
 		atualizaInimigo(2);
 	}
 	if (checkaColisaoComMisseis(&aabbTres)) {
 		printf("Aviao 3 morto\n");
+		pontos += 44;
 		atualizaInimigo(3);
 	}
 
@@ -2173,6 +2266,13 @@ void renderScene(void) {
 	loadIdentity(MODEL);
 
 	if (!pause) {
+
+		pontosCounter++;
+		if (pontosCounter == 27) {
+			pontos += 1;
+			pontosCounter = 0;
+		}
+
 		missilTimer++;
 		if (missilTimer == 20) {
 			//printf("ola1 %f\n", posisaoYUm);
@@ -2213,6 +2313,10 @@ void renderScene(void) {
 			if (acelerasao > 0.0f) {
 				acelerasao -= 0.005f * deltaTime * 100;
 			}
+		}
+
+		if (imunidade > 0) {
+			imunidade -= 1;
 		}
 	}
 
@@ -2355,6 +2459,8 @@ void renderScene(void) {
 	glUniform1i(tex_loc7, 7);
 	glUniform1i(tex_loc8, 8);
 	glUniform1i(tex_loc9, 9);
+	glUniform1i(tex_loc10, 10);
+	glUniform1i(tex_loc11, 11);
 
 		//send the light position in eye coordinates
 		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
@@ -2412,7 +2518,6 @@ void renderScene(void) {
 
 	if (!pause) {
 		respawnaAviao();
-
 		applyRotation();
 	}
 
@@ -2421,6 +2526,13 @@ void renderScene(void) {
 
 	//nosso
 	nossoAviao = true;
+	if (imunidade > 0 && imunidade % 12 == 0) {
+		verAviao = !verAviao;
+	}
+	if (imunidade == 0) {
+		verAviao = true;
+	}
+	//if(verAviao)
 	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
 
 	nossoAviao = false;
@@ -2450,6 +2562,7 @@ void renderScene(void) {
 		rotCCam = rotasaoCima;
 	}*/
 
+	
 	//Minimapa
 	if (camera == 3 || camera == 4) {
 		glUniform1i(mapa, 1);
@@ -2503,6 +2616,7 @@ void renderScene(void) {
 		glUniform1i(mapa, 0);
 		//ACABOU MINIMAPA
 	}
+	
 
 	multMatrixPoint(VIEW, spotLights, res);
 	glUniform4fv(spotLight1, 1, res);
@@ -2555,12 +2669,15 @@ void renderScene(void) {
 		luzBofia = (luzBofia == 0) ? 1 : 0;
 		glUniform1i(luzBofia_loc, luzBofia);
 	}
-	//renderTexto();
 	if (!pause) {
 		carroDaBofia();
 		rodaLuzDeCima();
 	}
 	fazGradienteLuz();
+	
+	renderTexto();
+	desenhaVidas();
+
 	glutSwapBuffers();
 }
 
@@ -2600,7 +2717,19 @@ void processKeys(unsigned char key, int xx, int yy)
 		}
 		break;
 	case 'p': 
-		pause = !pause;
+		if (vidas > 0) {
+			pause = !pause;
+		}
+		break;
+	case 'r':
+		pause = false;
+		vidas = 3;
+		pontos = 0;
+		posisaoX = 0.0f;
+		posisaoY = 125.0f;
+		posisaoZ = 0.0f;
+		rotasaoCima = 0.0f;
+		rotasaoLado = 0.0f;
 		break;
 	case 'a':
 		if (rotPlaneH > -45.0f) {
@@ -2803,7 +2932,7 @@ GLuint setupShaders() {
 	glBindFragDataLocation(shader.getProgramIndex(), 0,"colorOut");
 	glBindAttribLocation(shader.getProgramIndex(), VERTEX_COORD_ATTRIB, "position");
 	glBindAttribLocation(shader.getProgramIndex(), NORMAL_ATTRIB, "normal");
-	//glBindAttribLocation(shader.getProgramIndex(), TEXTURE_COORD_ATTRIB, "texCoord");
+	glBindAttribLocation(shader.getProgramIndex(), TEXTURE_COORD_ATTRIB, "texCoord");
 
 	glLinkProgram(shader.getProgramIndex());
 
@@ -2823,6 +2952,8 @@ GLuint setupShaders() {
 	tex_loc7 = glGetUniformLocation(shader.getProgramIndex(), "texmap7");
 	tex_loc8 = glGetUniformLocation(shader.getProgramIndex(), "texmap8");
 	tex_loc9 = glGetUniformLocation(shader.getProgramIndex(), "texmap9");
+	tex_loc10 = glGetUniformLocation(shader.getProgramIndex(), "texmap10");
+	tex_loc11 = glGetUniformLocation(shader.getProgramIndex(), "texmap11");
 	luzLocal1_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal1");
 	luzLocal2_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal2");
 	luzLocal3_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal3");
@@ -2881,7 +3012,6 @@ void init()
 	}
 	ilInit();
 
-
 	/// Initialization of freetype library with font_name file
 	freeType_init(font_name);
 
@@ -2891,7 +3021,7 @@ void init()
 	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(10, TextureArray);
+	glGenTextures(12, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -2902,6 +3032,8 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/lidl.jpg", 7);
 	Texture2D_Loader(TextureArray, "textures/beer.jpg", 8);
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
+	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
+	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
 
 	//---- cenas para assimp ------------------------------------------------
 	std::string filepath = "Trains/Trains.fbx";
@@ -2945,6 +3077,10 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[8]);
 	glActiveTexture(GL_TEXTURE9);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[9]);
+	glActiveTexture(GL_TEXTURE10);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[10]);
+	glActiveTexture(GL_TEXTURE11);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};

@@ -24,7 +24,6 @@ void Texture2D_Loader(unsigned int *textureArray, const char *strFileName, int I
 	ilEnable(IL_ORIGIN_SET);
 	ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
 	if (ilLoadImage(strFileName)) {
-		printf("%d\n", ID);
 		printf("2D Texture: Image %s sucessfully loaded.\n", strFileName);
 	}
 	else {
