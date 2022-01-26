@@ -46,6 +46,7 @@ using namespace std;
 #include "AABB.h"
 
 #include "avtFreeType.h"
+#include <flare.h>
 
 using namespace std;
 
@@ -94,7 +95,7 @@ GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
-GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11;
+GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12;
 GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
 GLint dia;
 GLint pointLights;
@@ -104,7 +105,7 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[12];
+GLuint TextureArray[13];
 
 //Variaveis fun mode
 bool minigame = false;
@@ -266,6 +267,42 @@ int aroTypes[N_AROS];
 int alturaAro[N_AROS];
 int arosInfo[37][3];
 
+//particulas de fireworks
+#define M_PI			3.14159265
+#define MAX_PARTICULAS  1500
+#define frand()			((float)rand()/RAND_MAX)
+
+typedef struct {
+	float	life;		// vida
+	float	fade;		// fade
+	float	r, g, b;    // color
+	GLfloat x, y, z;    // posi‹o
+	GLfloat vx, vy, vz; // velocidade 
+	GLfloat ax, ay, az; // acelera‹o
+} Particle;
+
+Particle particula[MAX_PARTICULAS];
+int dead_num_particles = 0;
+int fireworks = 0;
+
+//lens flare
+inline double clamp(const double x, const double min, const double max) {
+	return (x < min ? min : (x > max ? max : x));
+}
+
+inline int clampi(const int x, const int min, const int max) {
+	return (x < min ? min : (x > max ? max : x));
+}
+
+GLuint FlareTextureArray[5];
+
+//Flare effect
+FLARE_DEF AVTflare;
+float lightScreenPos[3];  //Position of the light in Window Coordinates
+bool spotlight_mode = false;
+bool flareEffect = false;
+
+
 void refresh(int value)
 {
 	glutPostRedisplay();
@@ -282,6 +319,151 @@ void timer(int value)
     FrameCount = 0;
 	glutTimerFunc(1000, timer, 0);
 }
+
+
+void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly represent the projected position of light on viewport
+
+	int     dx, dy;          // Screen coordinates of "destination"
+	int     px, py;          // Screen coordinates of flare element
+	int		cx, cy;
+	float    maxflaredist, flaredist, flaremaxsize, flarescale, scaleDistance;
+	int     width, height, alpha;    // Piece parameters;
+	int     i;
+	float	diffuse[4];
+
+	GLint loc;
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	int screenMaxCoordX = m_viewport[0] + m_viewport[2] - 1;
+	int screenMaxCoordY = m_viewport[1] + m_viewport[3] - 1;
+
+	//viewport center
+	cx = m_viewport[0] + (int)(0.5f * (float)m_viewport[2]) - 1;
+	cy = m_viewport[1] + (int)(0.5f * (float)m_viewport[3]) - 1;
+
+	// Compute how far off-center the flare source is.
+	maxflaredist = sqrt(cx * cx + cy * cy);
+	flaredist = sqrt((lx - cx) * (lx - cx) + (ly - cy) * (ly - cy));
+	scaleDistance = (maxflaredist - flaredist) / maxflaredist;
+	flaremaxsize = (int)(m_viewport[2] * flare->fMaxSize);
+	flarescale = (int)(m_viewport[2] * flare->fScale);
+
+	// Destination is opposite side of centre from source
+	dx = clampi(cx + (cx - lx), m_viewport[0], screenMaxCoordX);
+	dy = clampi(cy + (cy - ly), m_viewport[1], screenMaxCoordY);
+
+	// Render each element. To be used Texture Unit 0
+
+	glUniform1i(texMode_uniformId, 15); // draw modulated textured particles 
+	glUniform1i(tex_loc, 0);  //use TU 0
+
+	for (i = 0; i < flare->nPieces; ++i)
+	{
+		// Position is interpolated along line between start and destination.
+		px = (int)((1.0f - flare->element[i].fDistance) * lx + flare->element[i].fDistance * dx);
+		py = (int)((1.0f - flare->element[i].fDistance) * ly + flare->element[i].fDistance * dy);
+		px = clampi(px, m_viewport[0], screenMaxCoordX);
+		py = clampi(py, m_viewport[1], screenMaxCoordY);
+
+		// Piece size are 0 to 1; flare size is proportion of screen width; scale by flaredist/maxflaredist.
+		width = (int)(scaleDistance * flarescale * flare->element[i].fSize);
+
+		// Width gets clamped, to allows the off-axis flaresto keep a good size without letting the elements get big when centered.
+		if (width > flaremaxsize)  width = flaremaxsize;
+
+		height = (int)((float)m_viewport[3] / (float)m_viewport[2] * (float)width);
+		memcpy(diffuse, flare->element[i].matDiffuse, 4 * sizeof(float));
+		diffuse[3] *= scaleDistance;   //scale the alpha channel
+
+		if (width > 1)
+		{
+			// send the material - diffuse color modulated with texture
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			glUniform4fv(loc, 1, diffuse);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, FlareTextureArray[flare->element[i].textureId]);
+			pushMatrix(MODEL);
+			translate(MODEL, (float)(px - width * 0.0f), (float)(py - height * 0.0f), 0.0f);
+			scale(MODEL, (float)width, (float)height, 1);
+			computeDerivedMatrix(PROJ_VIEW_MODEL);
+			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+			computeNormalMatrix3x3();
+			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+			glBindVertexArray(myMeshes[6].vao);
+			glDrawElements(myMeshes[6].type, myMeshes[6].numIndexes, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			popMatrix(MODEL);
+		}
+	}
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+}
+
+
+void iniParticles(void)
+{
+	GLfloat v, theta, phi;
+	int i;
+
+	for (i = 0; i < MAX_PARTICULAS; i++)
+	{
+		v = 0.8 * frand() + 0.2;
+		phi = frand() * M_PI;
+		theta = 2.0 * frand() * M_PI;
+
+		particula[i].x = 490.0f;
+		particula[i].y = 285.0f;
+		particula[i].z = 490.0f;
+		particula[i].vx = v * cos(theta) * sin(phi);
+		particula[i].vy = v * cos(phi);
+		particula[i].vz = v * sin(theta) * sin(phi);
+		particula[i].ax = 0.1f; /* simular um pouco de vento */
+		particula[i].ay = -0.15f; /* simular a aceleração da gravidade */
+		particula[i].az = 0.0f;
+
+		/* tom amarelado que vai ser multiplicado pela textura que varia entre branco e preto */
+		particula[i].r = 0.882f;
+		particula[i].g = 0.552f;
+		particula[i].b = 0.211f;
+
+		particula[i].life = 1.0f;		/* vida inicial */
+		particula[i].fade = 0.0025f;	    /* step de decréscimo da vida para cada iteração */
+	}
+}
+
+void updateParticles()
+{
+	int i;
+	float h;
+
+	/* Método de Euler de integração de eq. diferenciais ordinárias
+	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
+
+	//h = 0.125f;
+	h = 0.033;
+	if (fireworks) {
+
+		for (i = 0; i < MAX_PARTICULAS; i++)
+		{
+			particula[i].x += (h * particula[i].vx);
+			particula[i].y += (h * particula[i].vy);
+			particula[i].z += (h * particula[i].vz);
+			particula[i].vx += (h * particula[i].ax);
+			particula[i].vy += (h * particula[i].ay);
+			particula[i].vz += (h * particula[i].az);
+			particula[i].life -= particula[i].fade;
+		}
+	}
+}
+
 
 
 // ------------------------------------------------------------
@@ -2251,7 +2433,8 @@ void renderScene(void) {
 	//printf("LuzDir: %f, %f, %f\n", aabb.luzDireita[0], aabb.luzDireita[1], aabb.luzDireita[2]);
 
 	GLint loc;
-
+	float pos[3], right[3], up[3];
+	float particle_color[4];
 	//printf("%f\n", rotasaoLado);
 
 	timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
@@ -2344,6 +2527,7 @@ void renderScene(void) {
 	atrasoCamera[posIndex][0] = posisaoX;
 	atrasoCamera[posIndex][1] = posisaoY;
 	atrasoCamera[posIndex][2] = posisaoZ;
+
 	
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
@@ -2461,6 +2645,7 @@ void renderScene(void) {
 	glUniform1i(tex_loc9, 9);
 	glUniform1i(tex_loc10, 10);
 	glUniform1i(tex_loc11, 11);
+	glUniform1i(tex_loc12, 12);
 
 		//send the light position in eye coordinates
 		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
@@ -2678,6 +2863,92 @@ void renderScene(void) {
 	renderTexto();
 	desenhaVidas();
 
+	if (fireworks) {
+		objId = 5;
+
+		updateParticles();
+
+		// draw fireworks particles
+
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glDepthMask(GL_FALSE);  //Depth Buffer Read Only
+
+		glUniform1i(texMode_uniformId, 14); // draw modulated textured particles 
+
+		for (int i = 0; i < MAX_PARTICULAS; i++)
+		{
+			if (particula[i].life > 0.0f) /* só desenha as que ainda estão vivas */
+			{
+
+				/* A vida da partícula representa o canal alpha da cor. Como o blend está activo a cor final é a soma da cor rgb do fragmento multiplicada pelo
+				alpha com a cor do pixel destino */
+
+				particle_color[0] = particula[i].r;
+				particle_color[1] = particula[i].g;
+				particle_color[2] = particula[i].b;
+				particle_color[3] = particula[i].life;
+
+				// send the material - diffuse color modulated with texture
+				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+				glUniform4fv(loc, 1, particle_color);
+
+				pushMatrix(MODEL);
+				translate(MODEL, particula[i].x, particula[i].y, particula[i].z);
+
+				// send matrices to OGL
+				computeDerivedMatrix(PROJ_VIEW_MODEL);
+				glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+				glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+				computeNormalMatrix3x3();
+				glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+				glBindVertexArray(myMeshes[objId].vao);
+				glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+				popMatrix(MODEL);
+			}
+			else dead_num_particles++;
+		}
+
+		glDepthMask(GL_TRUE); //make depth buffer again writeable
+
+		if (dead_num_particles == MAX_PARTICULAS) {
+			fireworks = 0;
+			dead_num_particles = 0;
+			printf("All particles dead\n");
+		}
+
+	}
+
+	if (flareEffect && !spotlight_mode) {
+
+		int flarePos[2];
+		int m_viewport[4];
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+		pushMatrix(MODEL);
+		loadIdentity(MODEL);
+		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+
+		if (!project(lightPos, lightScreenPos, m_viewport))
+			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
+		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
+		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
+		popMatrix(MODEL);
+
+		//viewer looking down at  negative z direction
+		pushMatrix(PROJECTION);
+		loadIdentity(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(VIEW);
+		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glutSwapBuffers();
 }
 
@@ -2701,8 +2972,18 @@ void processKeys(unsigned char key, int xx, int yy)
 		printf("Pressed c \n");
 		pointLightsLigadas = (pointLightsLigadas == 0 ? 1 : 0);
 		break;
+	case 'e':
+		fireworks = 1;
+		iniParticles();
+		break;
 	case 'm': glEnable(GL_MULTISAMPLE); break;
-	case 'l': printf("X:%f Z:%f \n", posisaoX, posisaoZ); break;
+	case 'l': printf("X:%f Z:%f  Y:%f\n", posisaoX, posisaoZ, posisaoY); break;
+	case 'k':
+		if (spotlight_mode) flareEffect = false;
+		else
+			if (flareEffect) flareEffect = false;
+			else flareEffect = true;
+		break;
 	case 'n':
 		printf("Pressed n \n");
 		//glDisable(GL_MULTISAMPLE);
@@ -2954,6 +3235,7 @@ GLuint setupShaders() {
 	tex_loc9 = glGetUniformLocation(shader.getProgramIndex(), "texmap9");
 	tex_loc10 = glGetUniformLocation(shader.getProgramIndex(), "texmap10");
 	tex_loc11 = glGetUniformLocation(shader.getProgramIndex(), "texmap11");
+	tex_loc12 = glGetUniformLocation(shader.getProgramIndex(), "texmap12");
 	luzLocal1_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal1");
 	luzLocal2_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal2");
 	luzLocal3_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal3");
@@ -3021,7 +3303,7 @@ void init()
 	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(12, TextureArray);
+	glGenTextures(13, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -3034,6 +3316,15 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
+	Texture2D_Loader(TextureArray, "textures/particle.tga", 12);
+
+	//Flare elements textures
+	glGenTextures(5, FlareTextureArray);
+	Texture2D_Loader(FlareTextureArray, "textures/crcl.tga", 0);
+	Texture2D_Loader(FlareTextureArray, "textures/flar.tga", 1);
+	Texture2D_Loader(FlareTextureArray, "textures/hxgn.tga", 2);
+	Texture2D_Loader(FlareTextureArray, "textures/ring.tga", 3);
+	Texture2D_Loader(FlareTextureArray, "textures/sun.tga", 4);
 
 	//---- cenas para assimp ------------------------------------------------
 	std::string filepath = "Trains/Trains.fbx";
@@ -3081,6 +3372,8 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[10]);
 	glActiveTexture(GL_TEXTURE11);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[12]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
@@ -3176,6 +3469,13 @@ void init()
 	amesh.mat.shininess = shininess;
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
+
+	// create geometry and VAO of the quad for flare elements
+	amesh = createQuad(1, 1);
+	myMeshes.push_back(amesh);
+
+	//Load flare from file
+	loadFlareFile(&AVTflare, "flare.txt");
 
 	srand(time(NULL));
 
@@ -3316,4 +3616,58 @@ int main(int argc, char **argv) {
 	glutMainLoop();
 
 	return(0);
+}
+
+unsigned int getTextureId(char* name) {
+	int i;
+
+	for (i = 0; i < NTEXTURES; ++i)
+	{
+		if (strncmp(name, flareTextureNames[i], strlen(name)) == 0)
+			return i;
+	}
+	return -1;
+}
+void    loadFlareFile(FLARE_DEF* flare, char* filename)
+{
+	int     n = 0;
+	FILE* f;
+	char    buf[256];
+	int fields;
+
+	memset(flare, 0, sizeof(FLARE_DEF));
+
+	f = fopen(filename, "r");
+	if (f)
+	{
+		fgets(buf, sizeof(buf), f);
+		sscanf(buf, "%f %f", &flare->fScale, &flare->fMaxSize);
+
+		while (!feof(f))
+		{
+			char            name[8] = { '\0', };
+			double          dDist = 0.0, dSize = 0.0;
+			float			color[4];
+			int				id;
+
+			fgets(buf, sizeof(buf), f);
+			fields = sscanf(buf, "%4s %lf %lf ( %f %f %f %f )", name, &dDist, &dSize, &color[3], &color[0], &color[1], &color[2]);
+			if (fields == 7)
+			{
+				for (int i = 0; i < 4; ++i) color[i] = clamp(color[i] / 255.0f, 0.0f, 1.0f);
+				id = getTextureId(name);
+				if (id < 0) printf("Texture name not recognized\n");
+				else
+					flare->element[n].textureId = id;
+				flare->element[n].fDistance = (float)dDist;
+				flare->element[n].fSize = (float)dSize;
+				memcpy(flare->element[n].matDiffuse, color, 4 * sizeof(float));
+				++n;
+			}
+		}
+
+		flare->nPieces = n;
+		fclose(f);
+	}
+	else printf("Flare file opening error\n");
 }
