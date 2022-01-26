@@ -95,7 +95,7 @@ GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
-GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12;
+GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13;
 GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
 GLint dia;
 GLint pointLights;
@@ -396,8 +396,8 @@ void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly
 			computeNormalMatrix3x3();
 			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
 
-			glBindVertexArray(myMeshes[6].vao);
-			glDrawElements(myMeshes[6].type, myMeshes[6].numIndexes, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(myMeshes[8].vao);
+			glDrawElements(myMeshes[8].type, myMeshes[8].numIndexes, GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 			popMatrix(MODEL);
 		}
@@ -3236,6 +3236,7 @@ GLuint setupShaders() {
 	tex_loc10 = glGetUniformLocation(shader.getProgramIndex(), "texmap10");
 	tex_loc11 = glGetUniformLocation(shader.getProgramIndex(), "texmap11");
 	tex_loc12 = glGetUniformLocation(shader.getProgramIndex(), "texmap12");
+	tex_loc13 = glGetUniformLocation(shader.getProgramIndex(), "texmap13");
 	luzLocal1_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal1");
 	luzLocal2_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal2");
 	luzLocal3_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal3");
