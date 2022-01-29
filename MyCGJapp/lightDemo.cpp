@@ -96,7 +96,8 @@ GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
 GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13;
-GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
+GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc, luzLocal16_loc;
+GLint tex_cube_loc;
 GLint dia;
 GLint pointLights;
 GLint corVariavel_loc;
@@ -105,7 +106,7 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[13];
+GLuint TextureArray[14];
 
 //Variaveis fun mode
 bool minigame = false;
@@ -223,7 +224,7 @@ float r = 10.0f;
 long myTime,timebase = 0,frame = 0;
 char s[32];
 float lightPos[4] = {496.0f, 400.0f, 496.0f, 0.0f};
-float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
+float luzesLocais[14][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{504.66f, 205.0f, 491.00f, 1.0},
 							{496.00f, 205.0f, 485.50f, 1.0},
 							{487.00f, 205.0f, 490.50f, 1.0},
@@ -236,7 +237,8 @@ float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{496.0f, 130.0f, 485.0f, 1.0},
 							{496.0f, 130.0f, 496.0f, 1.0},
 							//{120.0f, 3.0f, 120.0f, 1.0} 
-							{88.0f, 3.0f, 88.0f, 1.0}
+							{88.0f, 3.0f, 88.0f, 1.0},
+							{497.2f, 271.0f, 496.0f, 1.0},
 							};
 int contadorBofia = 0;
 int luzBofia = 0;
@@ -358,8 +360,7 @@ void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly
 
 	// Render each element. To be used Texture Unit 0
 
-	glUniform1i(texMode_uniformId, 15); // draw modulated textured particles 
-	glUniform1i(tex_loc, 0);  //use TU 0
+	glUniform1i(tex_loc13, 0);  //use TU 0
 
 	for (i = 0; i < flare->nPieces; ++i)
 	{
@@ -570,18 +571,20 @@ void renderTexto() {
 	pushMatrix(VIEW);
 	loadIdentity(VIEW);
 	ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+	float h = glutGet(GLUT_WINDOW_HEIGHT);
+	float w = glutGet(GLUT_WINDOW_WIDTH);
 	//RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
 	//RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
 	string msg = "Lives: " + std::to_string(vidas) + "  Points : " + std::to_string(pontos);
 	RenderText(shaderText, msg, 25.0, 25.0, 1.0f, 0.35f, 0.85f, 1.0f);
 	if (vidas == 0) {
-		RenderText(shaderText, "You died", WinX / 2.85, WinY / 2, 2.5f, 0.3, 0.7f, 0.9f);
-		RenderText(shaderText, "Press [r] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "You died", w / 2.85, h / 2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Press [r] to resume", w / 2.4, h / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
 		pause = true;
 	}
 	else if (pause) {
-		RenderText(shaderText, "Game paused", WinX/2.85, WinY/2, 2.5f, 0.3, 0.7f, 0.9f);
-		RenderText(shaderText, "Press [p] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Game paused", w /2.85, h /2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Press [p] to resume", w / 2.4, h / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
 	}
 
 	glUseProgram(shader.getProgramIndex());
@@ -2646,6 +2649,8 @@ void renderScene(void) {
 	glUniform1i(tex_loc10, 10);
 	glUniform1i(tex_loc11, 11);
 	glUniform1i(tex_loc12, 12);
+	glUniform1i(tex_loc13, 0);
+	glUniform1i(tex_cube_loc, 13);
 
 		//send the light position in eye coordinates
 		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
@@ -2681,6 +2686,8 @@ void renderScene(void) {
 		glUniform4fv(luzLocal12_loc, 1, res);
 		multMatrixPoint(VIEW, luzesLocais[12], res);
 		glUniform4fv(luzLocal13_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[13], res);
+		glUniform4fv(luzLocal16_loc, 1, res);
 
 		float loc14[4] = {aabb.luzEsquerda[0],aabb.luzEsquerda[1],aabb.luzEsquerda[2],1.0f};
 		multMatrixPoint(VIEW, loc14, res);
@@ -2695,6 +2702,43 @@ void renderScene(void) {
 		glUniform4fv(spotLightDir_loc, 1, spotDir);
 
 	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
+
+
+		// Render Sky Box
+	objId = 4;
+	glUniform1i(texMode_uniformId, 16);
+
+	//it won't write anything to the zbuffer; all subsequently drawn scenery to be in front of the sky box. 
+	glDepthMask(GL_FALSE);
+	glFrontFace(GL_CW); // set clockwise vertex order to mean the front
+
+	pushMatrix(MODEL);
+	pushMatrix(VIEW);  //se quiser anular a translação
+
+	//  Fica mais realista se não anular a translação da câmara 
+	// Cancel the translation movement of the camera - de acordo com o tutorial do Antons
+	mMatrix[VIEW][12] = 0.0f;
+	mMatrix[VIEW][13] = 0.0f;
+	mMatrix[VIEW][14] = 0.0f;
+
+	scale(MODEL, 1000.0f, 1000.0f, 1000.0f);
+	translate(MODEL, -0.5f, -0.5f, -0.5f);
+
+	// send matrices to OGL
+	glUniformMatrix4fv(m_uniformId, 1, GL_FALSE, mMatrix[MODEL]); //Transformação de modelação do cubo unitário para o "Big Cube"
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+
+	glBindVertexArray(myMeshes[objId].vao);
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	popMatrix(MODEL);
+	popMatrix(VIEW);
+
+	glFrontFace(GL_CCW); // restore counter clockwise vertex order to mean the front
+	glDepthMask(GL_TRUE);
+	//end skybox
+
 
 
 	glEnable(GL_STENCIL_TEST);
@@ -2860,6 +2904,8 @@ void renderScene(void) {
 	}
 	fazGradienteLuz();
 	
+
+
 	renderTexto();
 	desenhaVidas();
 
@@ -2931,8 +2977,9 @@ void renderScene(void) {
 		pushMatrix(MODEL);
 		loadIdentity(MODEL);
 		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+		glUniform1i(texMode_uniformId, 15);
 
-		if (!project(lightPos, lightScreenPos, m_viewport))
+		if (!project(luzesLocais[13], lightScreenPos, m_viewport))
 			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
 		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
 		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
@@ -2948,7 +2995,11 @@ void renderScene(void) {
 		popMatrix(PROJECTION);
 		popMatrix(VIEW);
 	}
-	glBindTexture(GL_TEXTURE_2D, 0);
+
+
+
+	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	glutSwapBuffers();
 }
 
@@ -3252,6 +3303,8 @@ GLuint setupShaders() {
 	luzLocal13_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal13");
 	luzLocal14_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal14");
 	luzLocal15_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal15");
+	luzLocal16_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal16");
+	tex_cube_loc = glGetUniformLocation(shader.getProgramIndex(), "cubeMap");
 	dia = glGetUniformLocation(shader.getProgramIndex(), "dia");
 	pointLights = glGetUniformLocation(shader.getProgramIndex(), "pointLights");
 	corVariavel_loc = glGetUniformLocation(shader.getProgramIndex(), "corVariavel");
@@ -3304,7 +3357,7 @@ void init()
 	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(13, TextureArray);
+	glGenTextures(14, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -3318,6 +3371,13 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
 	Texture2D_Loader(TextureArray, "textures/particle.tga", 12);
+
+	const char* filenames[] = { "textures/posx.jpg", "textures/negx.jpg", "textures/posy.jpg", "textures/negy.jpg", "textures/posz.jpg", "textures/negz.jpg" };
+	TextureCubeMap_Loader(TextureArray, filenames, 13);
+	
+
+	
+
 
 	//Flare elements textures
 	glGenTextures(5, FlareTextureArray);
@@ -3375,6 +3435,8 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
 	glActiveTexture(GL_TEXTURE12);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[12]);
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[13]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
@@ -3471,12 +3533,12 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
-	// create geometry and VAO of the quad for flare elements
+	// create geometry and VAO of the quad for flare elements 8
 	amesh = createQuad(1, 1);
 	myMeshes.push_back(amesh);
 
 	//Load flare from file
-	loadFlareFile(&AVTflare, "flare.txt");
+	loadFlareFile(&AVTflare, "textures/flare.txt");
 
 	srand(time(NULL));
 

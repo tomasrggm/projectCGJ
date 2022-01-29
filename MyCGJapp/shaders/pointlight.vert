@@ -25,6 +25,7 @@ uniform vec4 luzLocal12;
 uniform vec4 luzLocal13;
 uniform vec4 luzLocal14;
 uniform vec4 luzLocal15;
+uniform vec4 luzLocal16;
 
 out vec3 lLocalDir1;
 out vec3 lLocalDir2;
@@ -41,6 +42,7 @@ out vec3 lLocalDir12;
 out vec3 lLocalDir13;
 out vec3 lLocalDir14;
 out vec3 lLocalDir15;
+out vec3 lLocalDir16; //lens
 
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
@@ -53,6 +55,7 @@ out Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
+	vec3 skyboxTexCoord;
 } DataOut;
 
 out vec4 pos;
@@ -69,6 +72,10 @@ void main () {
 		DataOut.lightDir = vec3(0.0, 0.0, 0.0);
 	}
 	DataOut.eye = vec3(-pos);
+
+	DataOut.skyboxTexCoord = vec3(m_model * position);	//Transformação de modelação do cubo unitário 
+	DataOut.skyboxTexCoord.x = - DataOut.skyboxTexCoord.x; //Texturas mapeadas no interior logo negar a coordenada x
+
 	DataOut.tex_coord = texCoord.st;
 
 	lLocalDir1 = vec3(luzLocal1 - pos);
@@ -86,6 +93,7 @@ void main () {
 	lLocalDir13 = vec3(luzLocal13 - pos);
 	lLocalDir14 = vec3(luzLocal14 - pos);
 	lLocalDir15 = vec3(luzLocal15 - pos);
+	lLocalDir16 = vec3(luzLocal16 - pos);
 
 	if(fogFlag == 1){
 		float distance = length(pos);

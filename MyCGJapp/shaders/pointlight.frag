@@ -28,6 +28,9 @@ uniform sampler2D texmap11;
 uniform sampler2D texmap12;
 uniform sampler2D texmap13;
 uniform	sampler2D texUnitDiff;
+uniform samplerCube cubeMap;
+
+
 
 uniform int pointLights;
 uniform vec4 corVariavel;
@@ -53,6 +56,7 @@ in vec3 lLocalDir12;
 in vec3 lLocalDir13;
 in vec3 lLocalDir14; //spotlight
 in vec3 lLocalDir15; //spotlight
+in vec3 lLocalDir16; //lens
 
 uniform int fogFlag;
 in vec4 pos;
@@ -63,6 +67,7 @@ in Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
+	vec3 skyboxTexCoord;
 } DataIn;
 
 void main() {
@@ -204,6 +209,16 @@ void main() {
 			attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
 			resultado += branco * intensity * attenuation;
 
+			//lens flare
+			dist = length(lLocalDir16);
+			l = normalize(lLocalDir12);
+			intensity = max(dot(n,l), 0.0);
+			h = normalize(l + e);
+			intSpec = max(dot(h,n), 0.0);
+			spec += (mat.specular * pow(intSpec, mat.shininess)) * attenuation;
+			attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
+			resultado += branco * intensity * attenuation;
+
 			if(dia == 0){
 				dist = length(lLocalDir13);
 				l = normalize(lLocalDir13);
@@ -330,11 +345,13 @@ void main() {
 		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
 		else
 			colorOut = mat.diffuse * texel;
-	}else if(texMode == 15){
+	}else if(texMode == 15){ // lens
 		texel = texture(texmap13, DataIn.tex_coord);  //texel from element flare texture
 		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
 		else
 			colorOut = mat.diffuse * texel;
+	}else if(texMode == 16){
+		colorOut = texture(cubeMap, DataIn.skyboxTexCoord);
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
