@@ -182,8 +182,8 @@ float rotasaoCimaTres = 0.0f;
 float posicaoComboio = 0.0f;
 
 //variaveis criadas para a spotLight
-float spotLights[4] = { 0.0f,0.0f,0.0f, 1.0f};
-float spotLightDirection[4] = { 0.0f, 0.0f, 0.0f, 1.0f};
+float spotLights[4] = { 0.0f,0.0f,0.0f, 1.0f };
+float spotLightDirection[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 GLint spotLight1;
 GLint spotDirection;
 GLint spotlightOn;
@@ -235,7 +235,7 @@ int rotasaoLampada = 0;
 
 // Definicoes criadas
 #define PI 3.14159265
-	
+
 // Camera Position
 float camX, camY, camZ;
 
@@ -247,9 +247,9 @@ float alpha = 39.0f, beta = 51.0f;
 float r = 10.0f;
 
 // Frame counting and FPS computation
-long myTime,timebase = 0,frame = 0;
+long myTime, timebase = 0, frame = 0;
 char s[32];
-float lightPos[4] = {496.0f, 400.0f, 496.0f, 0.0f};
+float lightPos[4] = { 496.0f, 400.0f, 496.0f, 0.0f };
 float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{504.66f, 205.0f, 491.00f, 1.0},
 							{496.00f, 205.0f, 485.50f, 1.0},
@@ -262,12 +262,12 @@ float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{496.0f, 130.0f, 505.0f, 1.0},
 							{496.0f, 130.0f, 485.0f, 1.0},
 							{496.0f, 130.0f, 496.0f, 1.0},
-							//{120.0f, 3.0f, 120.0f, 1.0} 
-							{88.0f, 3.0f, 88.0f, 1.0}
-							};
+	//{120.0f, 3.0f, 120.0f, 1.0} 
+	{88.0f, 3.0f, 88.0f, 1.0}
+};
 int contadorBofia = 0;
 int luzBofia = 0;
-float corLuz[4] = { 1.0f, 0.0f, 1.0f , 1.0};
+float corLuz[4] = { 1.0f, 0.0f, 1.0f , 1.0 };
 int luzIndice = 0;
 int mudaLuz = -1;
 int luzSpot = 0;
@@ -293,7 +293,6 @@ int arosZ[N_AROS];
 int aroTypes[N_AROS];
 int alturaAro[N_AROS];
 int arosInfo[37][3];
-
 //lens flare
 inline double clamp(const double x, const double min, const double max) {
 	return (x < min ? min : (x > max ? max : x));
@@ -310,8 +309,6 @@ FLARE_DEF AVTflare;
 float lightScreenPos[3];  //Position of the light in Window Coordinates
 bool spotlight_mode = false;
 bool flareEffect = false;
-
-
 void refresh(int value)
 {
 	glutPostRedisplay();
@@ -325,7 +322,7 @@ void timer(int value)
 	std::string s = oss.str();
 	glutSetWindow(WindowHandle);
 	glutSetWindowTitle(s.c_str());
-    FrameCount = 0;
+	FrameCount = 0;
 	glutTimerFunc(1000, timer, 0);
 }
 
@@ -380,7 +377,42 @@ void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly
 
 		// Piece size are 0 to 1; flare size is proportion of screen width; scale by flaredist/maxflaredist.
 		width = (int)(scaleDistance * flarescale * flare->element[i].fSize);
+
+		// Width gets clamped, to allows the off-axis flaresto keep a good size without letting the elements get big when centered.
+		if (width > flaremaxsize)  width = flaremaxsize;
+
+		height = (int)((float)m_viewport[3] / (float)m_viewport[2] * (float)width);
+		memcpy(diffuse, flare->element[i].matDiffuse, 4 * sizeof(float));
+		diffuse[3] *= scaleDistance;   //scale the alpha channel
+
+		if (width > 1)
+		{
+			// send the material - diffuse color modulated with texture
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			glUniform4fv(loc, 1, diffuse);
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, FlareTextureArray[flare->element[i].textureId]);
+			pushMatrix(MODEL);
+			translate(MODEL, (float)(px - width * 0.0f), (float)(py - height * 0.0f), 0.0f);
+			scale(MODEL, (float)width, (float)height, 1);
+			computeDerivedMatrix(PROJ_VIEW_MODEL);
+			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+			computeNormalMatrix3x3();
+			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+			glBindVertexArray(myMeshes[8].vao);
+			glDrawElements(myMeshes[8].type, myMeshes[8].numIndexes, GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			popMatrix(MODEL);
+		}
 	}
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
 }
 
 // ------------------------------------------------------------
@@ -393,7 +425,7 @@ void changeSize(int w, int h) {
 	WinY = h;
 	float ratio;
 	// Prevent a divide by zero, when window is too short
-	if(h == 0)
+	if (h == 0)
 		h = 1;
 	// set the viewport to be the entire window
 	glViewport(0, 0, w, h);
@@ -434,7 +466,7 @@ void desenhaVidas() {
 		dir = -1;
 	}
 
-	glViewport(-WinX / 2.2, WinY/2.2, WinX, WinY);
+	glViewport(-WinX / 2.2, WinY / 2.2, WinX, WinY);
 	loadIdentity(VIEW);
 	lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoY - 10 * sin((rotasaoCima)*PI / 180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)), posisaoX, posisaoY, posisaoZ, 0, dir, 0);
 	loadIdentity(PROJECTION);
@@ -497,7 +529,7 @@ void renderTexto() {
 		pause = true;
 	}
 	else if (pause) {
-		RenderText(shaderText, "Game paused", WinX/2.85, WinY/2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Game paused", WinX / 2.85, WinY / 2, 2.5f, 0.3, 0.7f, 0.9f);
 		RenderText(shaderText, "Press [p] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
 	}
 
@@ -546,7 +578,7 @@ void respawnaAviao() {
 void applyRotation() {
 	if (o) {
 		/*if (!bateu) {*/
-			rotasaoLado -= 1.5f;
+		rotasaoLado -= 1.5f;
 		//}
 		//else {
 		//	rotLCam -= 1.5f;
@@ -558,33 +590,33 @@ void applyRotation() {
 	}
 	if (p) {
 		/*if (!bateu) {*/
-			rotasaoLado += 1.5f;
-	/*	}
-		else {
-			rotLCam += 1.5f;
-		}*/
+		rotasaoLado += 1.5f;
+		/*	}
+			else {
+				rotLCam += 1.5f;
+			}*/
 	}
 	if (p && rotPlaneH < 45.0f && !bateu) {
 		rotPlaneH += 1.5f;
 	}
 	if (q) {
-	/*	if (!bateu) {*/
-			rotasaoCima -= 1.5f;
-	/*	}
-		else {
-			rotCCam -= 1.5f;
-		}*/
+		/*	if (!bateu) {*/
+		rotasaoCima -= 1.5f;
+		/*	}
+			else {
+				rotCCam -= 1.5f;
+			}*/
 	}
 	if (q && rotPlaneV > -15.0f && !bateu) {
 		rotPlaneV -= 1.0f;
 	}
 	if (a) {
-	/*	if (!bateu) {*/
-			rotasaoCima += 1.5f;
-	/*	}
-		else {
-			rotCCam += 1.5f;
-		}*/
+		/*	if (!bateu) {*/
+		rotasaoCima += 1.5f;
+		/*	}
+			else {
+				rotCCam += 1.5f;
+			}*/
 	}
 	if (a && rotPlaneV < 15.0f && !bateu) {
 		rotPlaneV += 1.0f;
@@ -675,7 +707,7 @@ void renderArvores(float x, float y, float z, float sx, float sy, float sz, int 
 	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
 	glUniform1f(loc, myMeshes[objId].mat.shininess);
 
-	float cameraPos[3] = { posisaoX, 280,  posisaoZ};
+	float cameraPos[3] = { posisaoX, 280,  posisaoZ };
 
 	pushMatrix(MODEL);
 	translate(MODEL, x, y, z);
@@ -788,80 +820,80 @@ void mandaEfeitos() {
 	for (int j = 0; j < 8; j++) {
 		if (particula[j][0].life > 0.0001) {
 			printf("Entrou\n");
-	updateParticles(j);
+			updateParticles(j);
 
-	// draw fireworks particles
-	int objId = 5;  //quad for particle
+			// draw fireworks particles
+			int objId = 5;  //quad for particle
 
-	//glBindTexture(GL_TEXTURE_2D, TextureArray[11]); //particle.tga associated to TU0 
+			//glBindTexture(GL_TEXTURE_2D, TextureArray[11]); //particle.tga associated to TU0 
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glDepthMask(GL_FALSE);  //Depth Buffer Read Only
+			glDepthMask(GL_FALSE);  //Depth Buffer Read Only
 
-	glUniform1i(texMode_uniformId, 14); // draw modulated textured particles 
-	//glUniform1i(tex_loc, 0);
+			glUniform1i(texMode_uniformId, 14); // draw modulated textured particles 
+			//glUniform1i(tex_loc, 0);
 
-	for (int i = 0; i < MAX_PARTICULAS; i++)
-	{
-		if (particula[j][i].life > 0.0f) /* só desenha as que ainda estão vivas */
-		{
+			for (int i = 0; i < MAX_PARTICULAS; i++)
+			{
+				if (particula[j][i].life > 0.0f) /* só desenha as que ainda estão vivas */
+				{
 
-			/* A vida da partícula representa o canal alpha da cor. Como o blend está activo a cor final é a soma da cor rgb do fragmento multiplicada pelo
-			alpha com a cor do pixel destino */
+					/* A vida da partícula representa o canal alpha da cor. Como o blend está activo a cor final é a soma da cor rgb do fragmento multiplicada pelo
+					alpha com a cor do pixel destino */
 
-			particle_color[0] = particula[j][i].r;
-			particle_color[1] = particula[j][i].g;
-			particle_color[2] = particula[j][i].b;
-			particle_color[3] = particula[j][i].life;
+					particle_color[0] = particula[j][i].r;
+					particle_color[1] = particula[j][i].g;
+					particle_color[2] = particula[j][i].b;
+					particle_color[3] = particula[j][i].life;
 
-			//para a cor mudar ao longo do tempo
-			/*particula[i].r -= 0.001;
-			particula[i].b += 0.002;*/
+					//para a cor mudar ao longo do tempo
+					/*particula[i].r -= 0.001;
+					particula[i].b += 0.002;*/
 
-			//particula[j][i].r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-			//particula[j][i].g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-			//particula[j][i].b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+					//particula[j][i].r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+					//particula[j][i].g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+					//particula[j][i].b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
-			// send the material - diffuse color modulated with texture
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-			glUniform4fv(loc, 1, particle_color);
+					// send the material - diffuse color modulated with texture
+					loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+					glUniform4fv(loc, 1, particle_color);
 
-			pushMatrix(MODEL);
-			translate(MODEL, particula[j][i].x, particula[j][i].y, particula[j][i].z);
-			if (camera == 2) {
-				rotate(MODEL, -90, 1, 0, 0);
+					pushMatrix(MODEL);
+					translate(MODEL, particula[j][i].x, particula[j][i].y, particula[j][i].z);
+					if (camera == 2) {
+						rotate(MODEL, -90, 1, 0, 0);
+					}
+					else {
+						rotate(MODEL, -90 - rotasaoLado, 0, 1, 0);
+					}
+
+					// send matrices to OGL
+					computeDerivedMatrix(PROJ_VIEW_MODEL);
+					glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+					glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+					computeNormalMatrix3x3();
+					glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+					glBindVertexArray(myMeshes[objId].vao);
+					glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+					popMatrix(MODEL);
+				}
+				else dead_num_particles++;
 			}
-			else {
-				rotate(MODEL, -90 - rotasaoLado, 0, 1, 0);
-			}
-
-			// send matrices to OGL
-			computeDerivedMatrix(PROJ_VIEW_MODEL);
-			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-			computeNormalMatrix3x3();
-			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-			glBindVertexArray(myMeshes[objId].vao);
-			glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
-			popMatrix(MODEL);
 		}
-		else dead_num_particles++;
-		}
-	}
 
-	glDepthMask(GL_TRUE); //make depth buffer again writeable
-}
-/*
-	if (dead_num_particles == MAX_PARTICULAS) {
-		fireworks = 0;
-		dead_num_particles = 0;
-		printf("All particles dead\n");
+		glDepthMask(GL_TRUE); //make depth buffer again writeable
 	}
-	*/
-	//glDisable(GL_BLEND);
+	/*
+		if (dead_num_particles == MAX_PARTICULAS) {
+			fireworks = 0;
+			dead_num_particles = 0;
+			printf("All particles dead\n");
+		}
+		*/
+		//glDisable(GL_BLEND);
 }
 
 void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCima, float rotasaoLado, float rotPlaneV, float rotPlaneH) {
@@ -921,7 +953,7 @@ void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCi
 			else {
 				glUniform4fv(loc, 1, myMeshes[use].mat.diffuse);
 			}
-			
+
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
 			glUniform4fv(loc, 1, myMeshes[use].mat.specular);
 			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
@@ -1010,7 +1042,7 @@ void atualizaInimigo(int inimigo) {
 	case 1:
 		rotasaoLadoUm = (float)(rand() % 360);
 		rotasaoCimaUm = (float)(rand() % 360);
-		posisaoXUm =(float) (rand() % 1000);
+		posisaoXUm = (float)(rand() % 1000);
 		if (minigame) {
 			posisaoYUm = 200.0f;
 			rotasaoCimaUm = 0.0f;
@@ -1019,7 +1051,7 @@ void atualizaInimigo(int inimigo) {
 			posisaoYUm = (float)(rand() % 150 + 150);
 			rotasaoCimaUm = (float)(rand() % 360);
 		}
-		posisaoZUm =(float)(rand() % 1000);
+		posisaoZUm = (float)(rand() % 1000);
 		break;
 	case 2:
 		rotasaoLadoDois = (float)(rand() % 360);
@@ -1292,7 +1324,7 @@ void renderAro(int x, int z, int type, int altura) {
 	glUniform1i(texMode_uniformId, 10);
 	//int orientX = rand() % 2;
 	pushMatrix(MODEL);
-	translate(MODEL, x , altura, z );
+	translate(MODEL, x, altura, z);
 	//switch (type) {
 	//case 1:
 	//	//horizontal
@@ -1316,11 +1348,11 @@ void renderAro(int x, int z, int type, int altura) {
 		rotate(MODEL, 45, 0, 1, 0);
 		rotate(MODEL, 90, 1, 0, 0);
 	}
-	else if(type == 5) {
+	else if (type == 5) {
 		rotate(MODEL, 135, 0, 1, 0);
 		rotate(MODEL, 90, 1, 0, 0);
 	}
-	else if(type == 1){
+	else if (type == 1) {
 		rotate(MODEL, 90, 1, 0, 0);
 	}
 	else {
@@ -1351,7 +1383,7 @@ void renderAros() {
 	}
 
 	for (int i = 0; i < 3; i++) {
-		renderAro(540 - i * 48, 256 + i*48 , 5, 50);
+		renderAro(540 - i * 48, 256 + i * 48, 5, 50);
 		arosInfo[12 + i][0] = 540 - i * 48;
 		arosInfo[12 + i][1] = 256 + i * 48;
 		arosInfo[12 + i][2] = 5;
@@ -1404,7 +1436,7 @@ void renderCity() {
 	for (int i = 0; i < Q_PREDIOS; i++) {
 		for (int j = 0; j < Q_PREDIOS; j++) {
 
-			if(alturaPredios[i][j] != 0) {
+			if (alturaPredios[i][j] != 0) {
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
@@ -1569,7 +1601,7 @@ void renderChao() {
 				scale(MODEL, 150.0f, 1.0f, 154.0f);
 			}
 			else if (objId == 15) {
-				translate(MODEL, 441.0f , 0.0f, 776.0f);
+				translate(MODEL, 441.0f, 0.0f, 776.0f);
 				rotate(MODEL, -135, 0, 1, 0);
 				scale(MODEL, 325.0f, 1.0f, 15.0f);
 			}
@@ -1616,41 +1648,41 @@ void renderChao() {
 }
 
 void updateMisseis() {
-		GLint loc;
-		for (int i = 0; i < N_MISSEIS_MAX; i++) {
-			if (infoMisseis[i][3] != 0.0f) {
-				// send the material
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-				glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-				float dif[4] = { 0.9f, 0.0f, 0.7f, 1.0f };
-				glUniform4fv(loc, 1, dif);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-				glUniform4fv(loc, 1, myMeshes[3].mat.specular);
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-				glUniform1f(loc, myMeshes[3].mat.shininess);
-				pushMatrix(MODEL);
+	GLint loc;
+	for (int i = 0; i < N_MISSEIS_MAX; i++) {
+		if (infoMisseis[i][3] != 0.0f) {
+			// send the material
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+			glUniform4fv(loc, 1, myMeshes[3].mat.ambient);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			float dif[4] = { 0.9f, 0.0f, 0.7f, 1.0f };
+			glUniform4fv(loc, 1, dif);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+			glUniform4fv(loc, 1, myMeshes[3].mat.specular);
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+			glUniform1f(loc, myMeshes[3].mat.shininess);
+			pushMatrix(MODEL);
 
-				glUniform1i(texMode_uniformId, 10);
-				translate(MODEL, infoMisseis[i][2], infoMisseis[i][3], infoMisseis[i][4]);
-				rotate(MODEL, -infoMisseis[i][0], 0, 1, 0);
-				rotate(MODEL, infoMisseis[i][1], 0, 0, 1);
-				translate(MODEL, 0.0f, -0.75f, 0.0f);
-				scale(MODEL, 2.0f, 0.5f, 0.5f);
-				rotate(MODEL, 90, 0, 0, 1);
+			glUniform1i(texMode_uniformId, 10);
+			translate(MODEL, infoMisseis[i][2], infoMisseis[i][3], infoMisseis[i][4]);
+			rotate(MODEL, -infoMisseis[i][0], 0, 1, 0);
+			rotate(MODEL, infoMisseis[i][1], 0, 0, 1);
+			translate(MODEL, 0.0f, -0.75f, 0.0f);
+			scale(MODEL, 2.0f, 0.5f, 0.5f);
+			rotate(MODEL, 90, 0, 0, 1);
 
-				drawMesh(3);
+			drawMesh(3);
 
-				popMatrix(MODEL);
+			popMatrix(MODEL);
 
-				//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
-				if (!pause) {
-					infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-					infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-					infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-				}
+			//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
+			if (!pause) {
+				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
 			}
 		}
+	}
 }
 
 void updateMisseisInimigos() {
@@ -1671,34 +1703,34 @@ void updateMisseisInimigos() {
 			glUniform1f(loc, myMeshes[3].mat.shininess);
 			pushMatrix(MODEL);
 			if (j == 0) {
-			if (infoMisseisUm[i][3] != 0.0f) {
+				if (infoMisseisUm[i][3] != 0.0f) {
 
-				translate(MODEL, infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
-				rotate(MODEL, -infoMisseisUm[i][0], 0, 1, 0);
-				rotate(MODEL, infoMisseisUm[i][1], 0, 0, 1);
-				translate(MODEL, 0.0f, -0.75f, 0.0f);
-				scale(MODEL, 2.0f, 0.5f, 0.5f);
-				rotate(MODEL, 90, 0, 0, 1);
+					translate(MODEL, infoMisseisUm[i][2], infoMisseisUm[i][3], infoMisseisUm[i][4]);
+					rotate(MODEL, -infoMisseisUm[i][0], 0, 1, 0);
+					rotate(MODEL, infoMisseisUm[i][1], 0, 0, 1);
+					translate(MODEL, 0.0f, -0.75f, 0.0f);
+					scale(MODEL, 2.0f, 0.5f, 0.5f);
+					rotate(MODEL, 90, 0, 0, 1);
 
-				drawMesh(3);
+					drawMesh(3);
 
-				popMatrix(MODEL);
+					popMatrix(MODEL);
 
-				//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
-				
-				if (!pause) {
-					infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
-					infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
-					infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+					//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
+
+					if (!pause) {
+						infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+						infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
+						infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+					}
 				}
-			}
-			if (infoMisseisUm[i][3] < 0.0f) {
-				infoMisseisUm[i][0] = 0.0f;
-				infoMisseisUm[i][1] = 0.0f;
-				infoMisseisUm[i][2] = 0.0f;
-				infoMisseisUm[i][3] = 0.0f;
-				infoMisseisUm[i][4] = 0.0f;
-			}
+				if (infoMisseisUm[i][3] < 0.0f) {
+					infoMisseisUm[i][0] = 0.0f;
+					infoMisseisUm[i][1] = 0.0f;
+					infoMisseisUm[i][2] = 0.0f;
+					infoMisseisUm[i][3] = 0.0f;
+					infoMisseisUm[i][4] = 0.0f;
+				}
 			}
 			if (j == 1) {
 				if (infoMisseisDois[i][3] != 0.0f) {
@@ -1978,7 +2010,7 @@ void updateAABB(AABB* aabb, float rotasaoLado, float rotasaoCima, float posX, fl
 
 	aabb->tlC = glm::vec4(maxX, maxY, maxZ, 1.0f);
 	aabb->brC = glm::vec4(minX, minY, minZ, 1.0f);
-	
+
 	//atualiza a colliding box das asas do aviao
 
 	glm::vec4 newvert1CA = aabb->vert1CA;
@@ -2063,10 +2095,10 @@ bool checkaColisaoComMisseisInimigos(AABB* aabb) {
 				if (infoMisseisUm[i][3] != 0.0f) {
 					colideComMissil = colideComMissil || (infoMisseisUm[i][2] >= aabb->brC[0] && infoMisseisUm[i][2] <= aabb->tlC[0] &&
 						infoMisseisUm[i][3] >= aabb->brC[1] && infoMisseisUm[i][3] <= aabb->tlC[1] &&
-							infoMisseisUm[i][4] >= aabb->brC[2] && infoMisseisUm[i][4] <= aabb->tlC[2]) ||
+						infoMisseisUm[i][4] >= aabb->brC[2] && infoMisseisUm[i][4] <= aabb->tlC[2]) ||
 						(infoMisseisUm[i][2] >= aabb->brCA[0] && infoMisseisUm[i][2] <= aabb->tlCA[0] &&
-						infoMisseisUm[i][3] >= aabb->brCA[1] && infoMisseisUm[i][3] <= aabb->tlCA[1] &&
-						infoMisseisUm[i][4] >= aabb->brCA[2] && infoMisseisUm[i][4] <= aabb->tlCA[2]);
+							infoMisseisUm[i][3] >= aabb->brCA[1] && infoMisseisUm[i][3] <= aabb->tlCA[1] &&
+							infoMisseisUm[i][4] >= aabb->brCA[2] && infoMisseisUm[i][4] <= aabb->tlCA[2]);
 				}
 			}
 			else if (j == 1) {
@@ -2080,15 +2112,15 @@ bool checkaColisaoComMisseisInimigos(AABB* aabb) {
 				}
 			}
 			else if (j == 2) {
-					if (infoMisseisTres[i][3] != 0.0f) {
-						colideComMissil = colideComMissil || (infoMisseisTres[i][2] >= aabb->brC[0] && infoMisseisTres[i][2] <= aabb->tlC[0] &&
-							infoMisseisTres[i][3] >= aabb->brC[1] && infoMisseisTres[i][3] <= aabb->tlC[1] &&
-							infoMisseisTres[i][4] >= aabb->brC[2] && infoMisseisTres[i][4] <= aabb->tlC[2]) ||
-							(infoMisseisTres[i][2] >= aabb->brCA[0] && infoMisseisTres[i][2] <= aabb->tlCA[0] &&
-								infoMisseisTres[i][3] >= aabb->brCA[1] && infoMisseisTres[i][3] <= aabb->tlCA[1] &&
-								infoMisseisTres[i][4] >= aabb->brCA[2] && infoMisseisTres[i][4] <= aabb->tlCA[2]);
-					}
+				if (infoMisseisTres[i][3] != 0.0f) {
+					colideComMissil = colideComMissil || (infoMisseisTres[i][2] >= aabb->brC[0] && infoMisseisTres[i][2] <= aabb->tlC[0] &&
+						infoMisseisTres[i][3] >= aabb->brC[1] && infoMisseisTres[i][3] <= aabb->tlC[1] &&
+						infoMisseisTres[i][4] >= aabb->brC[2] && infoMisseisTres[i][4] <= aabb->tlC[2]) ||
+						(infoMisseisTres[i][2] >= aabb->brCA[0] && infoMisseisTres[i][2] <= aabb->tlCA[0] &&
+							infoMisseisTres[i][3] >= aabb->brCA[1] && infoMisseisTres[i][3] <= aabb->tlCA[1] &&
+							infoMisseisTres[i][4] >= aabb->brCA[2] && infoMisseisTres[i][4] <= aabb->tlCA[2]);
 				}
+			}
 		}
 		if (colideComMissil) {
 			return colideComMissil;
@@ -2099,19 +2131,19 @@ bool checkaColisaoComMisseisInimigos(AABB* aabb) {
 
 bool checkaColisaoComMisseis(AABB* aabb) {
 	bool colideComMissil = false;
-		for (int i = 0; i < N_MISSEIS_MAX; i++) {
-				if (infoMisseis[i][3] != 0.0f) {
-					colideComMissil = colideComMissil || (infoMisseis[i][2] >= aabb->brC[0] && infoMisseis[i][2] <= aabb->tlC[0] &&
-						infoMisseis[i][3] >= aabb->brC[1] && infoMisseis[i][3] <= aabb->tlC[1] &&
-							infoMisseis[i][4] >= aabb->brC[2] && infoMisseis[i][4] <= aabb->tlC[2]) ||
-						(infoMisseis[i][2] >= aabb->brCA[0] && infoMisseis[i][2] <= aabb->tlCA[0] &&
-						infoMisseis[i][3] >= aabb->brCA[1] && infoMisseis[i][3] <= aabb->tlCA[1] &&
-						infoMisseis[i][4] >= aabb->brCA[2] && infoMisseis[i][4] <= aabb->tlCA[2]);
-				}
+	for (int i = 0; i < N_MISSEIS_MAX; i++) {
+		if (infoMisseis[i][3] != 0.0f) {
+			colideComMissil = colideComMissil || (infoMisseis[i][2] >= aabb->brC[0] && infoMisseis[i][2] <= aabb->tlC[0] &&
+				infoMisseis[i][3] >= aabb->brC[1] && infoMisseis[i][3] <= aabb->tlC[1] &&
+				infoMisseis[i][4] >= aabb->brC[2] && infoMisseis[i][4] <= aabb->tlC[2]) ||
+				(infoMisseis[i][2] >= aabb->brCA[0] && infoMisseis[i][2] <= aabb->tlCA[0] &&
+					infoMisseis[i][3] >= aabb->brCA[1] && infoMisseis[i][3] <= aabb->tlCA[1] &&
+					infoMisseis[i][4] >= aabb->brCA[2] && infoMisseis[i][4] <= aabb->tlCA[2]);
 		}
-		if (colideComMissil) {
-			return colideComMissil;
-		}
+	}
+	if (colideComMissil) {
+		return colideComMissil;
+	}
 	return colideComMissil;
 }
 
@@ -2131,8 +2163,8 @@ bool checkaColisaoPredios(AABB* aabb) {
 	int predioX = 0;
 	int predioZ = 0;
 
-	predioX = (int) floor(v1[0] / 48.0f);
-	predioZ = (int) floor(v1[2] / 48.0f);
+	predioX = (int)floor(v1[0] / 48.0f);
+	predioZ = (int)floor(v1[2] / 48.0f);
 
 	//printf("v1: %f, %f, %f  v4: %f, %f, %f", v1[0], v1[1], v1[2], v4[0], v4[1], v4[2]);
 	//printf("Altura do aviao: %f Altura do predio: %d\n", CorpoZ, alturaPredios[predioX][predioZ]);
@@ -2269,13 +2301,13 @@ void handleCollisions() {
 	updateAABB(&aabbDois, (rotasaoLadoDois * PI / 180), (rotasaoCimaDois * PI / 180), posisaoXDois, posisaoYDois, posisaoZDois);
 	updateAABB(&aabbTres, (rotasaoLadoTres * PI / 180), (rotasaoCimaTres * PI / 180), posisaoXTres, posisaoYTres, posisaoZTres);
 	bateu = checkaColisaoPredios(&aabb);
-	
+
 	if (checkaColisaoComMisseisInimigos(&aabb)) {
 		printf("morreu\n");
 		if (imunidade == 0 && vidas > 0) {
 			vidas -= 1;
-			if(vidas > 0)
-			imunidade = 120;
+			if (vidas > 0)
+				imunidade = 120;
 		}
 	}
 	/* CODIGO PARA SE QUISERMOS QUE O AVIAO PERCA VIDAS AO COLIDIR COM PREDIOS
@@ -2552,7 +2584,7 @@ void renderObjetoAssimp() {
 	// sets the model matrix to a scale matrix so that the model fits in the window
 	pushMatrix(MODEL);
 	translate(MODEL, 86, 5, posicaoComboio);
-	scale(MODEL, scaleFactor*10, scaleFactor*10, scaleFactor*10);
+	scale(MODEL, scaleFactor * 10, scaleFactor * 10, scaleFactor * 10);
 	rotate(MODEL, 90, 0, 1, 0);
 
 	aiRecursive_render(scene, scene->mRootNode);
@@ -2576,7 +2608,7 @@ void renderScene(void) {
 	//printf("LuzDir: %f, %f, %f\n", aabb.luzDireita[0], aabb.luzDireita[1], aabb.luzDireita[2]);
 
 	GLint loc;
-
+	float pos[3], right[3], up[3];
 	//printf("%f\n", rotasaoLado);
 
 	timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
@@ -2660,7 +2692,7 @@ void renderScene(void) {
 
 	glUniform4fv(corVariavel_loc, 1, corLuz);
 
-	glUniform1i(fogF,fogFlag);
+	glUniform1i(fogF, fogFlag);
 
 	//atualizar o buffer circular (atraso da camera)
 	camIndex = (camIndex + 1) % 20;
@@ -2670,7 +2702,6 @@ void renderScene(void) {
 	atrasoCamera[posIndex][1] = posisaoY;
 	atrasoCamera[posIndex][2] = posisaoZ;
 
-	
 	// use our shader
 	glUseProgram(shader.getProgramIndex());
 
@@ -2717,11 +2748,11 @@ void renderScene(void) {
 		break;
 	case 3:
 		minigame = false;
-		if (rotasaoCima <= 295.5f && rotasaoCima > 115.5f){
+		if (rotasaoCima <= 295.5f && rotasaoCima > 115.5f) {
 			dirCamera = -1;
 		}
 		// camera movel
-		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180)*cos(rotasaoCima* PI /180)) + 5*sin(-rotasaoCima * PI/180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotasaoCima) * PI / 180) + 5 * cos(-rotasaoCima * PI /180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1*dirCamera, 0);
+		lookAt(posisaoX - (10 * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * cos(rotasaoLado * PI / 180), posisaoY - 10 * sin((rotasaoCima)*PI / 180) + 5 * cos(-rotasaoCima * PI / 180), posisaoZ - (10 * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180)) + 5 * sin(-rotasaoCima * PI / 180) * sin(rotasaoLado * PI / 180), posisaoX, posisaoY, posisaoZ, 0, 1 * dirCamera, 0);
 		//posisaoCamera[0] = (posisaoX - 3 * cos(-rotasaoLado * PI / 180)) + camX;
 		//posisaoCamera[1] = (posisaoZ - 3 * sin(-rotasaoLado * PI / 180)) + camZ;
 		loadIdentity(PROJECTION);
@@ -2789,54 +2820,54 @@ void renderScene(void) {
 	glUniform1i(tex_loc11, 11);
 	glUniform1i(tex_loc12, 12);
 
-		//send the light position in eye coordinates
-		//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
-		
-		glUniform1i(spotlightOn,luzSpot);
-		float res[4];
-		multMatrixPoint(VIEW, lightPos,res);   //lightPos definido em World Coord so is converted to eye space
-		glUniform4fv(lPos_uniformId, 1, res);
+	//send the light position in eye coordinates
+	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
 
-		multMatrixPoint(VIEW, luzesLocais[0], res);
-		glUniform4fv(luzLocal1_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[1], res);
-		glUniform4fv(luzLocal2_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[2], res);
-		glUniform4fv(luzLocal3_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[3], res);
-		glUniform4fv(luzLocal4_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[4], res);
-		glUniform4fv(luzLocal5_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[5], res);
-		glUniform4fv(luzLocal6_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[6], res);
-		glUniform4fv(luzLocal7_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[7], res);
-		glUniform4fv(luzLocal8_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[8], res);
-		glUniform4fv(luzLocal9_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[9], res);
-		glUniform4fv(luzLocal10_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[10], res);
-		glUniform4fv(luzLocal11_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[11], res);
-		glUniform4fv(luzLocal12_loc, 1, res);
-		multMatrixPoint(VIEW, luzesLocais[12], res);
-		glUniform4fv(luzLocal13_loc, 1, res);
+	glUniform1i(spotlightOn, luzSpot);
+	float res[4];
+	multMatrixPoint(VIEW, lightPos, res);   //lightPos definido em World Coord so is converted to eye space
+	glUniform4fv(lPos_uniformId, 1, res);
 
-		float loc14[4] = {aabb.luzEsquerda[0],aabb.luzEsquerda[1],aabb.luzEsquerda[2],1.0f};
-		multMatrixPoint(VIEW, loc14, res);
-		glUniform4fv(luzLocal14_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[0], res);
+	glUniform4fv(luzLocal1_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[1], res);
+	glUniform4fv(luzLocal2_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[2], res);
+	glUniform4fv(luzLocal3_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[3], res);
+	glUniform4fv(luzLocal4_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[4], res);
+	glUniform4fv(luzLocal5_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[5], res);
+	glUniform4fv(luzLocal6_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[6], res);
+	glUniform4fv(luzLocal7_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[7], res);
+	glUniform4fv(luzLocal8_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[8], res);
+	glUniform4fv(luzLocal9_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[9], res);
+	glUniform4fv(luzLocal10_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[10], res);
+	glUniform4fv(luzLocal11_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[11], res);
+	glUniform4fv(luzLocal12_loc, 1, res);
+	multMatrixPoint(VIEW, luzesLocais[12], res);
+	glUniform4fv(luzLocal13_loc, 1, res);
 
-		float loc15[4] = {aabb.luzDireita[0],aabb.luzDireita[1],aabb.luzDireita[2],1.0f};
-		multMatrixPoint(VIEW, loc15, res);
-		glUniform4fv(luzLocal15_loc, 1, res);
-		//printf("%f\n", rotasaoLado);
-		//float spotDir[4] = { 1.0*cos(rotasaoLado*PI/180),1.0*sin(rotasaoCima*PI/180),1.0*sin(rotasaoLado*PI/180),1.0f };
-		float spotDir[4] = { 0.0,0.0,-1.0,1.0 };
-		glUniform4fv(spotLightDir_loc, 1, spotDir);
+	float loc14[4] = { aabb.luzEsquerda[0],aabb.luzEsquerda[1],aabb.luzEsquerda[2],1.0f };
+	multMatrixPoint(VIEW, loc14, res);
+	glUniform4fv(luzLocal14_loc, 1, res);
 
-	int objId=0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
+	float loc15[4] = { aabb.luzDireita[0],aabb.luzDireita[1],aabb.luzDireita[2],1.0f };
+	multMatrixPoint(VIEW, loc15, res);
+	glUniform4fv(luzLocal15_loc, 1, res);
+	//printf("%f\n", rotasaoLado);
+	//float spotDir[4] = { 1.0*cos(rotasaoLado*PI/180),1.0*sin(rotasaoCima*PI/180),1.0*sin(rotasaoLado*PI/180),1.0f };
+	float spotDir[4] = { 0.0,0.0,-1.0,1.0 };
+	glUniform4fv(spotLightDir_loc, 1, spotDir);
+
+	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
 
 	glEnable(GL_STENCIL_TEST);
@@ -2875,7 +2906,7 @@ void renderScene(void) {
 
 	renderSigns();
 
-	renderArvores(496, 280, 496, 10,10,10,0);
+	renderArvores(496, 280, 496, 10, 10, 10, 0);
 
 	renderAros();
 
@@ -2893,33 +2924,6 @@ void renderScene(void) {
 
 	if (fireworks) {
 		mandaEfeitos();
-	}
-	
-	if (flareEffect && !spotlight_mode) {
-
-		int flarePos[2];
-		int m_viewport[4];
-		glGetIntegerv(GL_VIEWPORT, m_viewport);
-
-		pushMatrix(MODEL);
-		loadIdentity(MODEL);
-		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
-
-		if (!project(lightPos, lightScreenPos, m_viewport))
-			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
-		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
-		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
-		popMatrix(MODEL);
-
-		//viewer looking down at  negative z direction
-		pushMatrix(PROJECTION);
-		loadIdentity(PROJECTION);
-		pushMatrix(VIEW);
-		loadIdentity(VIEW);
-		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
-		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
-		popMatrix(PROJECTION);
-		popMatrix(VIEW);
 	}
 
 	//Minimapa
@@ -2975,13 +2979,13 @@ void renderScene(void) {
 		glUniform1i(mapa, 0);
 		//ACABOU MINIMAPA
 	}
-	
+
 
 	multMatrixPoint(VIEW, spotLights, res);
 	glUniform4fv(spotLight1, 1, res);
 	multMatrixPoint(VIEW, spotLightDirection, res);
 	glUniform4fv(spotDirection, 1, res);
-	
+
 	if (!bateu && !pause) {
 		posisaoX += (0.3f + acelerasao) * cos(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
 		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180) * deltaTime * 100;
@@ -2998,8 +3002,8 @@ void renderScene(void) {
 		posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 		posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 		posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
-	
-	heatSeek();
+
+		heatSeek();
 	}
 
 	atualizaAviaoInfo();
@@ -3023,7 +3027,7 @@ void renderScene(void) {
 			}
 		}
 	}
-	contadorBofia = (contadorBofia + 1 )%20;
+	contadorBofia = (contadorBofia + 1) % 20;
 	if (contadorBofia == 0) {
 		luzBofia = (luzBofia == 0) ? 1 : 0;
 		glUniform1i(luzBofia_loc, luzBofia);
@@ -3033,12 +3037,36 @@ void renderScene(void) {
 		rodaLuzDeCima();
 	}
 	fazGradienteLuz();
-	
+
 	renderTexto();
 	desenhaVidas();
 
-	//glBindTexture(GL_TEXTURE_2D, 0);
+	if (flareEffect && !spotlight_mode) {
 
+		int flarePos[2];
+		int m_viewport[4];
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+		pushMatrix(MODEL);
+		loadIdentity(MODEL);
+		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+
+		if (!project(lightPos, lightScreenPos, m_viewport))
+			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
+		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
+		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
+		popMatrix(MODEL);
+
+		//viewer looking down at  negative z direction
+		pushMatrix(PROJECTION);
+		loadIdentity(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(VIEW);
+		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+	}
 	glutSwapBuffers();
 }
 
@@ -3083,7 +3111,7 @@ void processKeys(unsigned char key, int xx, int yy)
 			pointLightsLigadas = 0;
 		}
 		break;
-	case 'p': 
+	case 'p':
 		if (vidas > 0) {
 			pause = !pause;
 		}
@@ -3204,7 +3232,7 @@ void processKeysUp(unsigned char key, int xx, int yy) {
 void processMouseButtons(int button, int state, int xx, int yy)
 {
 	// start tracking the mouse
-	if (state == GLUT_DOWN)  {
+	if (state == GLUT_DOWN) {
 		startX = xx;
 		startY = yy;
 		if (button == GLUT_LEFT_BUTTON)
@@ -3237,8 +3265,8 @@ void processMouseMotion(int xx, int yy)
 	float alphaAux, betaAux;
 	float rAux;
 
-	deltaX =  - xx + startX;
-	deltaY =    yy - startY;
+	deltaX = -xx + startX;
+	deltaY = yy - startY;
 
 	// left mouse button: move camera
 	if (tracking == 1) {
@@ -3265,10 +3293,10 @@ void processMouseMotion(int xx, int yy)
 
 	camX = rAux * sin(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f);
 	camZ = rAux * cos(alphaAux * 3.14f / 180.0f) * cos(betaAux * 3.14f / 180.0f);
-	camY = rAux *   						       sin(betaAux * 3.14f / 180.0f);
+	camY = rAux * sin(betaAux * 3.14f / 180.0f);
 
-//  uncomment this if not using an idle or refresh func
-//	glutPostRedisplay();
+	//  uncomment this if not using an idle or refresh func
+	//	glutPostRedisplay();
 }
 
 
@@ -3280,10 +3308,10 @@ void mouseWheel(int wheel, int direction, int x, int y) {
 
 	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
 	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r *   						     sin(beta * 3.14f / 180.0f);
+	camY = r * sin(beta * 3.14f / 180.0f);
 
-//  uncomment this if not using an idle or refresh func
-//	glutPostRedisplay();
+	//  uncomment this if not using an idle or refresh func
+	//	glutPostRedisplay();
 }
 
 // --------------------------------------------------------
@@ -3301,7 +3329,7 @@ GLuint setupShaders() {
 	shader.loadShader(VSShaderLib::FRAGMENT_SHADER, "shaders/pointlight.frag");
 
 	// set semantics for the shader variables
-	glBindFragDataLocation(shader.getProgramIndex(), 0,"colorOut");
+	glBindFragDataLocation(shader.getProgramIndex(), 0, "colorOut");
 	glBindAttribLocation(shader.getProgramIndex(), VERTEX_COORD_ATTRIB, "position");
 	glBindAttribLocation(shader.getProgramIndex(), NORMAL_ATTRIB, "normal");
 	glBindAttribLocation(shader.getProgramIndex(), TEXTURE_COORD_ATTRIB, "texCoord");
@@ -3354,7 +3382,7 @@ GLuint setupShaders() {
 	spotLightDir_loc = glGetUniformLocation(shader.getProgramIndex(), "spotLightDirection");
 	mapa = glGetUniformLocation(shader.getProgramIndex(), "mapa");
 	assimp = glGetUniformLocation(shader.getProgramIndex(), "assimp");
-	
+
 	printf("InfoLog for Per Fragment Phong Lightning Shader\n%s\n\n", shader.getAllInfoLogs().c_str());
 
 	// Shader for bitmap Text
@@ -3364,7 +3392,7 @@ GLuint setupShaders() {
 
 	glLinkProgram(shaderText.getProgramIndex());
 	printf("InfoLog for Text Rendering Shader\n%s\n\n", shaderText.getAllInfoLogs().c_str());
-	
+
 	return(shader.isProgramLinked() && shaderText.isProgramLinked());
 }
 
@@ -3392,7 +3420,7 @@ void init()
 	// set the camera position based on its spherical coordinates
 	camX = r * sin(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
 	camZ = r * cos(alpha * 3.14f / 180.0f) * cos(beta * 3.14f / 180.0f);
-	camY = r *   						     sin(beta * 3.14f / 180.0f);
+	camY = r * sin(beta * 3.14f / 180.0f);
 
 	//texturas
 	glGenTextures(13, TextureArray);
@@ -3409,7 +3437,6 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
 	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
-
 	//Flare elements textures
 	glGenTextures(5, FlareTextureArray);
 	Texture2D_Loader(FlareTextureArray, "textures/crcl.tga", 0);
@@ -3464,7 +3491,9 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[10]);
 	glActiveTexture(GL_TEXTURE11);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
-	
+	glActiveTexture(GL_TEXTURE12);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[12]);
+
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
 	float diff[] = { 1.0f, 0.86, 0.97f, 1.0f };
@@ -3483,10 +3512,10 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
-	float amb1[]= {0.3f, 0.0f, 0.0f, 1.0f};
+	float amb1[] = { 0.3f, 0.0f, 0.0f, 1.0f };
 	float diff1[] = { 0.8f, 0.0f, 0.6f, 1.0f };
-	float spec1[] = {0.9f, 0.9f, 0.9f, 1.0f};
-	shininess=500.0;
+	float spec1[] = { 0.9f, 0.9f, 0.9f, 1.0f };
+	shininess = 500.0;
 
 	// create geometry and VAO of the cylinder    1
 	amesh = createCylinder(1.0f, 1.0f, 20);
@@ -3612,7 +3641,7 @@ void init()
 	for (int i = 0; i < N_AROS; i++) {
 		arosX[i] = rand() % Q_PREDIOS;
 		arosZ[i] = rand() % Q_PREDIOS;
-		while (alturaPredios[arosX[i]][arosZ[i]] == 0 ) {
+		while (alturaPredios[arosX[i]][arosZ[i]] == 0) {
 			arosX[i] = rand() % Q_PREDIOS;
 			arosZ[i] = rand() % Q_PREDIOS;
 		}
@@ -3653,22 +3682,22 @@ void init()
 //
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 
-//  GLUT initialization
+	//  GLUT initialization
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DEPTH|GLUT_DOUBLE|GLUT_RGBA|GLUT_MULTISAMPLE);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE);
 
-	glutInitContextVersion (4, 3);
-	glutInitContextProfile (GLUT_CORE_PROFILE );
+	glutInitContextVersion(4, 3);
+	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutInitContextFlags(GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
 
-	glutInitWindowPosition(100,100);
+	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(WinX, WinY);
 	WindowHandle = glutCreateWindow(CAPTION);
 
 
-//  Callback Registration
+	//  Callback Registration
 	glutDisplayFunc(renderScene);
 	glutReshapeFunc(changeSize);
 
@@ -3682,20 +3711,20 @@ int main(int argc, char **argv) {
 	glutKeyboardUpFunc(processKeysUp);
 	glutMouseFunc(processMouseButtons);
 	glutMotionFunc(processMouseMotion);
-	glutMouseWheelFunc ( mouseWheel ) ;
-	
+	glutMouseWheelFunc(mouseWheel);
 
-//	return from main loop
+
+	//	return from main loop
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 
-//	Init GLEW
+	//	Init GLEW
 	glewExperimental = GL_TRUE;
 	glewInit();
 
-	printf ("Vendor: %s\n", glGetString (GL_VENDOR));
-	printf ("Renderer: %s\n", glGetString (GL_RENDERER));
-	printf ("Version: %s\n", glGetString (GL_VERSION));
-	printf ("GLSL: %s\n", glGetString (GL_SHADING_LANGUAGE_VERSION));
+	printf("Vendor: %s\n", glGetString(GL_VENDOR));
+	printf("Renderer: %s\n", glGetString(GL_RENDERER));
+	printf("Version: %s\n", glGetString(GL_VERSION));
+	printf("GLSL: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	if (!setupShaders())
 		return(1);
