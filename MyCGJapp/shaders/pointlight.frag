@@ -25,6 +25,8 @@ uniform sampler2D texmap8;
 uniform sampler2D texmap9;
 uniform sampler2D texmap10;
 uniform sampler2D texmap11;
+uniform sampler2D texmap12;
+uniform sampler2D texmap13;
 uniform	sampler2D texUnitDiff;
 
 uniform int pointLights;
@@ -328,6 +330,11 @@ void main() {
 				discard;
 			else
 				colorOut = mat.diffuse;
+	}else if(texMode == 15){
+		texel = texture(texmap13, DataIn.tex_coord);  //texel from element flare texture
+		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
+		else
+			colorOut = mat.diffuse * texel;
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
