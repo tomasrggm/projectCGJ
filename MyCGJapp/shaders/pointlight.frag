@@ -276,7 +276,6 @@ void main() {
 			else
 				//colorOut =  vec4(max(resultado*texel.rgb + spec.rgb, texel.rgb), texel.a);
 				colorOut =  vec4(max(resultado.rgb*texel.rgb + spec.rgb, texel.rgb), texel.a);
-
 	}else if(texMode == 2){//grass
 			texel = texture(texmap1, DataIn.tex_coord);  // texel from grass
 			colorOut =  vec4(max(resultado.rgb*texel.rgb + spec.rgb,  mat.ambient.rgb  + 0.1*texel.rgb), 1.0);
@@ -340,12 +339,13 @@ void main() {
 			if(texel.a == 0.0) discard;
 			else
 			colorOut =  vec4(texel.rgb, texel.a);
-	}else if(texMode == 14){ //fireworks
-			texel = texture(texmap12, DataIn.tex_coord);
-		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
-		else
-			colorOut = mat.diffuse * texel;
-	}else if(texMode == 15){ // lens
+	}else if (texMode == 14){
+			texel = texture(texmap, DataIn.tex_coord); //texel from particla (que na verdade e a flor hihi)
+			if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) 
+				discard;
+			else
+				colorOut = mat.diffuse;
+	}else if(texMode == 15){
 		texel = texture(texmap13, DataIn.tex_coord);  //texel from element flare texture
 		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
 		else
