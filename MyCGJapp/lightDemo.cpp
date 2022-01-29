@@ -46,6 +46,7 @@ using namespace std;
 #include "AABB.h"
 
 #include "avtFreeType.h"
+#include "l3dBillboard.h"
 
 using namespace std;
 
@@ -60,10 +61,11 @@ char model_dir[] = { 'T', 'r', 'a', 'i', 'n', 's' };
 // scale factor for the Assimp model to fit in the window
 extern float scaleFactor;
 
+#define frand()			((float)rand()/RAND_MAX)
+#define MAX_PARTICULAS  225
 #define CAPTION "Tokyo drift"
 int WindowHandle = 0;
 int WinX = 1024, WinY = 576;
-
 
 unsigned int FrameCount = 0;
 
@@ -104,7 +106,32 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[12];
+GLuint TextureArray[13];
+
+//Particles
+int fireworks = 1;
+typedef struct {
+	float	life;		// vida
+	float	fade;		// fade
+	float	r, g, b;    // color
+	GLfloat x, y, z;    // posi‹o
+	GLfloat vx, vy, vz; // velocidade 
+	GLfloat ax, ay, az; // acelera‹o
+} Particle;
+
+Particle particula[8][MAX_PARTICULAS];
+int dead_num_particles = 0;
+int fireworkCounter = 0;
+int aviaoExplodido[3];
+bool isExplosion;
+float cores[8][3] = { {1,0.32,0.76},
+					{1,0.32,0.32},
+					{0.71,0.32,1},
+					{0.32,0.8,1},
+					{0.32,1,0.84},
+					{0.32,1,0.35},
+					{1,0.93,0.32},
+					{1,0.66,0.22} };
 
 //Variaveis fun mode
 bool minigame = false;
@@ -555,6 +582,214 @@ void renderMiniMapa() {
 	drawMesh(use);
 	glDisable(GL_STENCIL_TEST);
 	popMatrix(MODEL);
+}
+
+void renderArvores(float x, float y, float z, float sx, float sy, float sz, int texture) {
+	//glDepthMask(GL_FALSE);
+	//glEnable(GL_BLEND);
+	//glDisable(GL_CULL_FACE);
+	// send the material
+	GLint loc;
+	int objId = 5;
+	glUniform1i(texMode_uniformId, 1);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+
+	float cameraPos[3] = { posisaoX, 280,  posisaoZ};
+
+	pushMatrix(MODEL);
+	translate(MODEL, x, y, z);
+	scale(MODEL, sx, sy, sz);
+	//float pos[3] = { 40.5, 2.0, 65.0 };
+	float pos[3] = { x, y, z };
+	l3dBillboardCylindricalBegin(cameraPos, pos);
+
+	drawMesh(objId);
+
+	popMatrix(MODEL);
+	//glDisable(GL_BLEND);
+	//glDepthMask(GL_TRUE);
+	//glEnable(GL_CULL_FACE);
+	//glEnable(GL_DEPTH_TEST);
+}
+
+//funcoes dos fireworks
+void iniParticles(int firework)
+{
+	GLfloat v, theta, phi;
+	int i;
+	int xis, ipselon, zeh;
+
+	if (isExplosion) {
+		xis = aviaoExplodido[0];
+		ipselon = aviaoExplodido[1];
+		zeh = aviaoExplodido[2];
+		isExplosion = false;
+	}
+	else {
+		xis = rand() % 1000;
+		ipselon = rand() % 150 + 75;
+		zeh = rand() % 1000;
+	}
+
+	float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+	float g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+	float b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+	for (i = 0; i < MAX_PARTICULAS; i++)
+	{
+		v = 10 * frand() + 0.2;
+		phi = frand() * PI;
+		theta = 2.0 * frand() * PI;
+
+		particula[firework][i].x = xis;
+		particula[firework][i].y = ipselon;
+		particula[firework][i].z = zeh;
+		particula[firework][i].vx = v * cos(theta) * sin(phi);
+		particula[firework][i].vy = v * cos(phi);
+		particula[firework][i].vz = v * sin(theta) * sin(phi);
+		particula[firework][i].ax = 0.0f; /* simular um pouco de vento */
+		particula[firework][i].ay = -0.15f; /* simular a aceleração da gravidade */
+		particula[firework][i].az = 0.0f;
+
+		/* tom amarelado que vai ser multiplicado pela textura que varia entre branco e preto */
+		/*particula[i].r = 0.882f;
+		particula[i].g = 0.552f;
+		particula[i].b = 0.211f;*/
+		//rosa
+		//particula[firework][i].r = rand() % 100 /101;
+		//particula[firework][i].g = rand() % 100 / 101;
+		//particula[firework][i].b = rand() % 100 / 101;
+		// 
+		particula[firework][i].r = cores[fireworkCounter][0];
+		particula[firework][i].g = cores[fireworkCounter][1];
+		particula[firework][i].b = cores[fireworkCounter][2];
+		// 
+		//azul(alterar o mandaEfeitos para meter o G a rand e tirar o rand do B
+		/*
+		particula[i].r = 0.3f;
+		particula[i].g = 0.3f;
+		particula[i].b = 1.0f;*/
+
+		particula[firework][i].life = 1.0f;		/* vida inicial */
+		particula[firework][i].fade = 0.0050f;	    /* step de decréscimo da vida para cada iteração */
+	}
+}
+
+void updateParticles(int i)
+{
+	int j;
+	float h;
+
+	/* Método de Euler de integração de eq. diferenciais ordinárias
+	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
+
+	//h = 0.125f;
+	h = 0.033;
+	if (fireworks) {
+
+		for (j = 0; j < MAX_PARTICULAS; j++)
+		{
+			particula[i][j].x += (h * particula[i][j].vx);
+			particula[i][j].y += (h * particula[i][j].vy);
+			particula[i][j].z += (h * particula[i][j].vz);
+			particula[i][j].vx += (h * particula[i][j].ax);
+			particula[i][j].vy += (h * particula[i][j].ay);
+			particula[i][j].vz += (h * particula[i][j].az);
+			particula[i][j].life -= particula[i][j].fade;
+		}
+	}
+}
+
+void mandaEfeitos() {
+	float particle_color[4];
+	GLint loc;
+
+	for (int j = 0; j < 8; j++) {
+		if (particula[j][0].life > 0.0001) {
+			printf("Entrou\n");
+	updateParticles(j);
+
+	// draw fireworks particles
+	int objId = 5;  //quad for particle
+
+	//glBindTexture(GL_TEXTURE_2D, TextureArray[11]); //particle.tga associated to TU0 
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glDepthMask(GL_FALSE);  //Depth Buffer Read Only
+
+	glUniform1i(texMode_uniformId, 14); // draw modulated textured particles 
+	//glUniform1i(tex_loc, 0);
+
+	for (int i = 0; i < MAX_PARTICULAS; i++)
+	{
+		if (particula[j][i].life > 0.0f) /* só desenha as que ainda estão vivas */
+		{
+
+			/* A vida da partícula representa o canal alpha da cor. Como o blend está activo a cor final é a soma da cor rgb do fragmento multiplicada pelo
+			alpha com a cor do pixel destino */
+
+			particle_color[0] = particula[j][i].r;
+			particle_color[1] = particula[j][i].g;
+			particle_color[2] = particula[j][i].b;
+			particle_color[3] = particula[j][i].life;
+
+			//para a cor mudar ao longo do tempo
+			/*particula[i].r -= 0.001;
+			particula[i].b += 0.002;*/
+
+			//particula[j][i].r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			//particula[j][i].g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+			//particula[j][i].b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+
+			// send the material - diffuse color modulated with texture
+			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+			glUniform4fv(loc, 1, particle_color);
+
+			pushMatrix(MODEL);
+			translate(MODEL, particula[j][i].x, particula[j][i].y, particula[j][i].z);
+			if (camera == 2) {
+				rotate(MODEL, -90, 1, 0, 0);
+			}
+			else {
+				rotate(MODEL, -90 - rotasaoLado, 0, 1, 0);
+			}
+
+			// send matrices to OGL
+			computeDerivedMatrix(PROJ_VIEW_MODEL);
+			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+			computeNormalMatrix3x3();
+			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+			glBindVertexArray(myMeshes[objId].vao);
+			glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+			popMatrix(MODEL);
+		}
+		else dead_num_particles++;
+		}
+	}
+
+	glDepthMask(GL_TRUE); //make depth buffer again writeable
+}
+/*
+	if (dead_num_particles == MAX_PARTICULAS) {
+		fireworks = 0;
+		dead_num_particles = 0;
+		printf("All particles dead\n");
+	}
+	*/
+	//glDisable(GL_BLEND);
 }
 
 void renderAviao(float posisaoX, float posisaoY, float posisaoZ, float rotasaoCima, float rotasaoLado, float rotPlaneV, float rotPlaneH) {
@@ -1380,9 +1615,9 @@ void updateMisseisInimigos() {
 				//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
 				
 				if (!pause) {
-					infoMisseisUm[i][2] += 0.5f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
-					infoMisseisUm[i][3] += 0.5f * sin(infoMisseisUm[i][1] * PI / 180);
-					infoMisseisUm[i][4] += 0.5f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+					infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
+					infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
+					infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
 				}
 			}
 			if (infoMisseisUm[i][3] < 0.0f) {
@@ -1996,16 +2231,34 @@ void handleCollisions() {
 	if (checkaColisaoComMisseis(&aabbUm)) {
 		printf("Aviao 1 morto\n");
 		pontos += 44;
+		fireworkCounter = (fireworkCounter + 1) % 8;
+		aviaoExplodido[0] = posisaoXUm;
+		aviaoExplodido[1] = posisaoYUm;
+		aviaoExplodido[2] = posisaoZUm;
+		isExplosion = true;
+		iniParticles(fireworkCounter);
 		atualizaInimigo(1);
 	}
 	if (checkaColisaoComMisseis(&aabbDois)) {
 		printf("Aviao 2 morto\n");
 		pontos += 44;
+		fireworkCounter = (fireworkCounter + 1) % 8;
+		aviaoExplodido[0] = posisaoXDois;
+		aviaoExplodido[1] = posisaoYDois;
+		aviaoExplodido[2] = posisaoZDois;
+		isExplosion = true;
+		iniParticles(fireworkCounter);
 		atualizaInimigo(2);
 	}
 	if (checkaColisaoComMisseis(&aabbTres)) {
 		printf("Aviao 3 morto\n");
 		pontos += 44;
+		fireworkCounter = (fireworkCounter + 1) % 8;
+		aviaoExplodido[0] = posisaoXTres;
+		aviaoExplodido[1] = posisaoYTres;
+		aviaoExplodido[2] = posisaoZTres;
+		isExplosion = true;
+		iniParticles(fireworkCounter);
 		atualizaInimigo(3);
 	}
 
@@ -2548,6 +2801,8 @@ void renderScene(void) {
 
 	renderSigns();
 
+	renderArvores(496, 280, 496, 10,10,10,0);
+
 	renderAros();
 
 	renderTorre();
@@ -2562,6 +2817,9 @@ void renderScene(void) {
 		rotCCam = rotasaoCima;
 	}*/
 
+	if (fireworks) {
+		mandaEfeitos();
+	}
 	
 	//Minimapa
 	if (camera == 3 || camera == 4) {
@@ -2737,6 +2995,11 @@ void processKeys(unsigned char key, int xx, int yy)
 			isRotatingH = true;
 		}
 		o = true;
+		break;
+	case 'e':
+		printf("Pressed e\n");
+		iniParticles(fireworkCounter);
+		fireworkCounter = (fireworkCounter + 1) % 8;
 		break;
 	case 'd':
 		if (rotPlaneH < 45.0f) {
@@ -3021,7 +3284,7 @@ void init()
 	camY = r *   						     sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(12, TextureArray);
+	glGenTextures(13, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -3034,6 +3297,7 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
+	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
 
 	//---- cenas para assimp ------------------------------------------------
 	std::string filepath = "Trains/Trains.fbx";

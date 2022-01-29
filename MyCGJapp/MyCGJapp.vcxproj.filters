@@ -36,6 +36,9 @@
     <ClCompile Include="meshFromAssimp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="l3dBillboard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AVTmathLib.h">
