@@ -525,8 +525,8 @@ void renderTexto() {
 	string msg = "Lives: " + std::to_string(vidas) + "  Points : " + std::to_string(pontos);
 	RenderText(shaderText, msg, 25.0, 25.0, 1.0f, 0.35f, 0.85f, 1.0f);
 	if (vidas == 0) {
-		RenderText(shaderText, "You died", w / 2.85, h / 2, 2.5f, 0.3, 0.7f, 0.9f);
-		RenderText(shaderText, "Press [r] to resume", w / 2.4, h / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "You died", WinX / 2.85, WinY / 2, 2.5f, 0.3, 0.7f, 0.9f);
+		RenderText(shaderText, "Press [r] to resume", WinX / 2.4, WinY / 2.65, 1.0f, 0.3, 0.7f, 0.9f);
 		pause = true;
 	}
 	else if (pause) {
@@ -3488,7 +3488,7 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
-	Texture2D_Loader(TextureArray, "textures/particle.tga", 12);
+	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
 
 	const char* filenames[] = { "textures/posx.jpg", "textures/negx.jpg", "textures/posy.jpg", "textures/negy.jpg", "textures/posz.jpg", "textures/negz.jpg" };
 	TextureCubeMap_Loader(TextureArray, filenames, 13);
