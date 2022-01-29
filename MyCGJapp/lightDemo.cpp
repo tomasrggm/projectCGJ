@@ -46,11 +46,8 @@ using namespace std;
 #include "AABB.h"
 
 #include "avtFreeType.h"
-<<<<<<< HEAD
 #include "l3dBillboard.h"
-=======
 #include <flare.h>
->>>>>>> 6cb460ffc4f5dbd7a984eab589a7edff910a5b0e
 
 using namespace std;
 
@@ -111,7 +108,6 @@ GLint mapa;
 GLint assimp;
 
 GLuint TextureArray[13];
-<<<<<<< HEAD
 
 //Particles
 int fireworks = 1;
@@ -137,8 +133,6 @@ float cores[8][3] = { {1,0.32,0.76},
 					{0.32,1,0.35},
 					{1,0.93,0.32},
 					{1,0.66,0.22} };
-=======
->>>>>>> 6cb460ffc4f5dbd7a984eab589a7edff910a5b0e
 
 //Variaveis fun mode
 bool minigame = false;
@@ -300,24 +294,6 @@ int aroTypes[N_AROS];
 int alturaAro[N_AROS];
 int arosInfo[37][3];
 
-//particulas de fireworks
-#define M_PI			3.14159265
-#define MAX_PARTICULAS  1500
-#define frand()			((float)rand()/RAND_MAX)
-
-typedef struct {
-	float	life;		// vida
-	float	fade;		// fade
-	float	r, g, b;    // color
-	GLfloat x, y, z;    // posi‹o
-	GLfloat vx, vy, vz; // velocidade 
-	GLfloat ax, ay, az; // acelera‹o
-} Particle;
-
-Particle particula[MAX_PARTICULAS];
-int dead_num_particles = 0;
-int fireworks = 0;
-
 //lens flare
 inline double clamp(const double x, const double min, const double max) {
 	return (x < min ? min : (x > max ? max : x));
@@ -404,100 +380,8 @@ void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly
 
 		// Piece size are 0 to 1; flare size is proportion of screen width; scale by flaredist/maxflaredist.
 		width = (int)(scaleDistance * flarescale * flare->element[i].fSize);
-
-		// Width gets clamped, to allows the off-axis flaresto keep a good size without letting the elements get big when centered.
-		if (width > flaremaxsize)  width = flaremaxsize;
-
-		height = (int)((float)m_viewport[3] / (float)m_viewport[2] * (float)width);
-		memcpy(diffuse, flare->element[i].matDiffuse, 4 * sizeof(float));
-		diffuse[3] *= scaleDistance;   //scale the alpha channel
-
-		if (width > 1)
-		{
-			// send the material - diffuse color modulated with texture
-			loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-			glUniform4fv(loc, 1, diffuse);
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, FlareTextureArray[flare->element[i].textureId]);
-			pushMatrix(MODEL);
-			translate(MODEL, (float)(px - width * 0.0f), (float)(py - height * 0.0f), 0.0f);
-			scale(MODEL, (float)width, (float)height, 1);
-			computeDerivedMatrix(PROJ_VIEW_MODEL);
-			glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-			glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-			computeNormalMatrix3x3();
-			glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-			glBindVertexArray(myMeshes[8].vao);
-			glDrawElements(myMeshes[8].type, myMeshes[8].numIndexes, GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
-			popMatrix(MODEL);
-		}
-	}
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-}
-
-
-void iniParticles(void)
-{
-	GLfloat v, theta, phi;
-	int i;
-
-	for (i = 0; i < MAX_PARTICULAS; i++)
-	{
-		v = 0.8 * frand() + 0.2;
-		phi = frand() * M_PI;
-		theta = 2.0 * frand() * M_PI;
-
-		particula[i].x = 490.0f;
-		particula[i].y = 285.0f;
-		particula[i].z = 490.0f;
-		particula[i].vx = v * cos(theta) * sin(phi);
-		particula[i].vy = v * cos(phi);
-		particula[i].vz = v * sin(theta) * sin(phi);
-		particula[i].ax = 0.1f; /* simular um pouco de vento */
-		particula[i].ay = -0.15f; /* simular a aceleração da gravidade */
-		particula[i].az = 0.0f;
-
-		/* tom amarelado que vai ser multiplicado pela textura que varia entre branco e preto */
-		particula[i].r = 0.882f;
-		particula[i].g = 0.552f;
-		particula[i].b = 0.211f;
-
-		particula[i].life = 1.0f;		/* vida inicial */
-		particula[i].fade = 0.0025f;	    /* step de decréscimo da vida para cada iteração */
 	}
 }
-
-void updateParticles()
-{
-	int i;
-	float h;
-
-	/* Método de Euler de integração de eq. diferenciais ordinárias
-	h representa o step de tempo; dv/dt = a; dx/dt = v; e conhecem-se os valores iniciais de x e v */
-
-	//h = 0.125f;
-	h = 0.033;
-	if (fireworks) {
-
-		for (i = 0; i < MAX_PARTICULAS; i++)
-		{
-			particula[i].x += (h * particula[i].vx);
-			particula[i].y += (h * particula[i].vy);
-			particula[i].z += (h * particula[i].vz);
-			particula[i].vx += (h * particula[i].ax);
-			particula[i].vy += (h * particula[i].ay);
-			particula[i].vz += (h * particula[i].az);
-			particula[i].life -= particula[i].fade;
-		}
-	}
-}
-
-
 
 // ------------------------------------------------------------
 //
@@ -2692,8 +2576,7 @@ void renderScene(void) {
 	//printf("LuzDir: %f, %f, %f\n", aabb.luzDireita[0], aabb.luzDireita[1], aabb.luzDireita[2]);
 
 	GLint loc;
-	float pos[3], right[3], up[3];
-	float particle_color[4];
+
 	//printf("%f\n", rotasaoLado);
 
 	timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
@@ -3012,6 +2895,33 @@ void renderScene(void) {
 		mandaEfeitos();
 	}
 	
+	if (flareEffect && !spotlight_mode) {
+
+		int flarePos[2];
+		int m_viewport[4];
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+		pushMatrix(MODEL);
+		loadIdentity(MODEL);
+		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+
+		if (!project(lightPos, lightScreenPos, m_viewport))
+			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
+		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
+		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
+		popMatrix(MODEL);
+
+		//viewer looking down at  negative z direction
+		pushMatrix(PROJECTION);
+		loadIdentity(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(VIEW);
+		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+	}
+
 	//Minimapa
 	if (camera == 3 || camera == 4) {
 		glUniform1i(mapa, 1);
@@ -3127,92 +3037,8 @@ void renderScene(void) {
 	renderTexto();
 	desenhaVidas();
 
-	if (fireworks) {
-		objId = 5;
+	//glBindTexture(GL_TEXTURE_2D, 0);
 
-		updateParticles();
-
-		// draw fireworks particles
-
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glDepthMask(GL_FALSE);  //Depth Buffer Read Only
-
-		glUniform1i(texMode_uniformId, 14); // draw modulated textured particles 
-
-		for (int i = 0; i < MAX_PARTICULAS; i++)
-		{
-			if (particula[i].life > 0.0f) /* só desenha as que ainda estão vivas */
-			{
-
-				/* A vida da partícula representa o canal alpha da cor. Como o blend está activo a cor final é a soma da cor rgb do fragmento multiplicada pelo
-				alpha com a cor do pixel destino */
-
-				particle_color[0] = particula[i].r;
-				particle_color[1] = particula[i].g;
-				particle_color[2] = particula[i].b;
-				particle_color[3] = particula[i].life;
-
-				// send the material - diffuse color modulated with texture
-				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-				glUniform4fv(loc, 1, particle_color);
-
-				pushMatrix(MODEL);
-				translate(MODEL, particula[i].x, particula[i].y, particula[i].z);
-
-				// send matrices to OGL
-				computeDerivedMatrix(PROJ_VIEW_MODEL);
-				glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-				glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-				computeNormalMatrix3x3();
-				glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-				glBindVertexArray(myMeshes[objId].vao);
-				glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
-				popMatrix(MODEL);
-			}
-			else dead_num_particles++;
-		}
-
-		glDepthMask(GL_TRUE); //make depth buffer again writeable
-
-		if (dead_num_particles == MAX_PARTICULAS) {
-			fireworks = 0;
-			dead_num_particles = 0;
-			printf("All particles dead\n");
-		}
-
-	}
-
-	if (flareEffect && !spotlight_mode) {
-
-		int flarePos[2];
-		int m_viewport[4];
-		glGetIntegerv(GL_VIEWPORT, m_viewport);
-
-		pushMatrix(MODEL);
-		loadIdentity(MODEL);
-		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
-
-		if (!project(lightPos, lightScreenPos, m_viewport))
-			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
-		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
-		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
-		popMatrix(MODEL);
-
-		//viewer looking down at  negative z direction
-		pushMatrix(PROJECTION);
-		loadIdentity(PROJECTION);
-		pushMatrix(VIEW);
-		loadIdentity(VIEW);
-		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
-		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
-		popMatrix(PROJECTION);
-		popMatrix(VIEW);
-	}
-	glBindTexture(GL_TEXTURE_2D, 0);
 	glutSwapBuffers();
 }
 
@@ -3235,10 +3061,6 @@ void processKeys(unsigned char key, int xx, int yy)
 		//printf("Camera Spherical Coordinates (%f, %f, %f)\n", alpha, beta, r);
 		printf("Pressed c \n");
 		pointLightsLigadas = (pointLightsLigadas == 0 ? 1 : 0);
-		break;
-	case 'e':
-		fireworks = 1;
-		iniParticles();
 		break;
 	case 'm': glEnable(GL_MULTISAMPLE); break;
 	case 'l': printf("X:%f Z:%f  Y:%f\n", posisaoX, posisaoZ, posisaoY); break;
@@ -3586,10 +3408,7 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/tea.jpg", 9);
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
-<<<<<<< HEAD
 	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
-=======
-	Texture2D_Loader(TextureArray, "textures/particle.tga", 12);
 
 	//Flare elements textures
 	glGenTextures(5, FlareTextureArray);
@@ -3598,7 +3417,6 @@ void init()
 	Texture2D_Loader(FlareTextureArray, "textures/hxgn.tga", 2);
 	Texture2D_Loader(FlareTextureArray, "textures/ring.tga", 3);
 	Texture2D_Loader(FlareTextureArray, "textures/sun.tga", 4);
->>>>>>> 6cb460ffc4f5dbd7a984eab589a7edff910a5b0e
 
 	//---- cenas para assimp ------------------------------------------------
 	std::string filepath = "Trains/Trains.fbx";
@@ -3646,8 +3464,6 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[10]);
 	glActiveTexture(GL_TEXTURE11);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
-	glActiveTexture(GL_TEXTURE12);
-	glBindTexture(GL_TEXTURE_2D, TextureArray[12]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
