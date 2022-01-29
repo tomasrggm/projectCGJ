@@ -58,6 +58,7 @@ out Data {
 	vec3 lightDir;
 	vec2 tex_coord;
 	vec3 skyboxTexCoord;
+	vec3 reflected;
 } DataOut;
 
 out vec4 pos;

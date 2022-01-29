@@ -97,7 +97,7 @@ GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
-GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13, tex_loc14, tex_normalMap_loc;
+GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13, tex_loc14, tex_normalMap_loc, tex_loc16;
 GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc, luzLocal16_loc;
 GLint tex_cube_loc;
 GLint view_uniformId;
@@ -109,7 +109,7 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[16];
+GLuint TextureArray[17];
 
 //Particles
 int fireworks = 1;
@@ -2825,6 +2825,7 @@ void renderScene(void) {
 	glUniform1i(tex_cube_loc, 13);
 	glUniform1i(tex_loc14, 14);
 	glUniform1i(tex_normalMap_loc, 15);
+	glUniform1i(tex_loc16, 16);
 
 	//send the light position in eye coordinates
 	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
@@ -2999,6 +3000,49 @@ void renderScene(void) {
 	popMatrix(MODEL);
 
 	glUniform1i(texMode_uniformId, 0);
+	// BUMP END
+
+	//ENVIRONMENT START
+		//Enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glUniform1i(texMode_uniformId, 18);
+
+	objId = 4;
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 76.0f, 127.0f, 76.0f);
+
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	popMatrix(MODEL);
+	glDisable(GL_BLEND);
+	glUniform1i(texMode_uniformId, 0);
+
 
 	/*if (!bateu) {*/
 	handleCollisions();
@@ -3451,6 +3495,7 @@ GLuint setupShaders() {
 	tex_loc13 = glGetUniformLocation(shader.getProgramIndex(), "texmap13");
 	tex_loc14 = glGetUniformLocation(shader.getProgramIndex(), "texmap14");
 	tex_normalMap_loc = glGetUniformLocation(shader.getProgramIndex(), "normalMap");
+	tex_loc16 = glGetUniformLocation(shader.getProgramIndex(), "texmap16");
 	luzLocal1_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal1");
 	luzLocal2_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal2");
 	luzLocal3_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal3");
@@ -3521,7 +3566,7 @@ void init()
 	camY = r * sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(16, TextureArray);
+	glGenTextures(17, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -3540,6 +3585,7 @@ void init()
 	TextureCubeMap_Loader(TextureArray, filenames, 13);
 	Texture2D_Loader(TextureArray, "textures/stone.tga", 14);
 	Texture2D_Loader(TextureArray, "textures/normal.tga", 15);
+	Texture2D_Loader(TextureArray, "textures/lightwood.tga", 16);
 	
 
 	
@@ -3607,6 +3653,8 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[14]);
 	glActiveTexture(GL_TEXTURE15);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[15]);
+	glActiveTexture(GL_TEXTURE16);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[16]);
 	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};

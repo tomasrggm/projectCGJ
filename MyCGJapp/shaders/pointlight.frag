@@ -32,7 +32,7 @@ uniform samplerCube cubeMap;
 uniform mat4 m_View;
 uniform sampler2D normalMap;
 uniform sampler2D texmap14;
-
+uniform sampler2D texmap16;
 
 uniform int pointLights;
 uniform vec4 corVariavel;
@@ -63,6 +63,7 @@ in vec3 lLocalDir16; //lens
 uniform int fogFlag;
 in vec4 pos;
 in float visibility;
+const float reflect_factor = 0.9;
 
 in Data {
 	vec3 normal;
@@ -70,10 +71,11 @@ in Data {
 	vec3 lightDir;
 	vec2 tex_coord;
 	vec3 skyboxTexCoord;
+	vec3 reflected;
 } DataIn;
 
 void main() {
-	vec4 texel, texel1;
+	vec4 texel, texel1, cube_texel;
 	vec4 branco = vec4(1.0, 1.0, 1.0, 1.0);
 	vec4 vermelho = vec4(1.0, 0.0, 0.0, 1.0);
 	vec4 azul = vec4(0.0, 0.3, 1.0, 1.0);
@@ -107,6 +109,8 @@ void main() {
 		spec = mat.specular * pow(intSpec, mat.shininess);
 		resultado = branco * intensity;
 	}
+
+
 	
 	if(pointLights == 1){
 			dist = length(lLocalDir1);
@@ -277,6 +281,7 @@ void main() {
 			}
 	}
 
+
 	//texturas
 	if (texMode == 1){
 			texel = texture(texmap, DataIn.tex_coord);  // texel from helice
@@ -363,6 +368,15 @@ void main() {
 	}else if(texMode == 17){
 		vec4 texelBump = texture(texmap14, DataIn.tex_coord);
 		colorOut = vec4((max(intensity*texelBump + spec, 0.2*texelBump)).rgb, 1.0);
+	}else if(texMode == 18){
+		vec3 reflected1 = vec3 (transpose(m_View) * vec4 (vec3(reflect(-e, n)), 0.0)); //reflection vector in world coord
+		reflected1.x= -reflected1.x;   
+		cube_texel = texture(cubeMap, reflected1);
+		vec4 texelMap = texture(texmap16, DataIn.tex_coord);  // texel from lighwood.tga
+		vec4 aux_color = mix(texelMap, cube_texel, reflect_factor);
+		aux_color = max(intensity*aux_color + spec, 0.1*aux_color);
+	    colorOut = vec4(aux_color.rgb, 1.0); 
+	  //colorOut = vec4(cube_texel.rgb, 1.0);
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
