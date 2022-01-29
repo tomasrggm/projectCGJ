@@ -29,7 +29,9 @@ uniform sampler2D texmap12;
 uniform sampler2D texmap13;
 uniform	sampler2D texUnitDiff;
 uniform samplerCube cubeMap;
-
+uniform mat4 m_View;
+uniform sampler2D normalMap;
+uniform sampler2D texmap14;
 
 
 uniform int pointLights;
@@ -80,7 +82,13 @@ void main() {
 	float quadratic = 0.0007f;
 
 	vec3 h;
-	vec3 n = normalize(DataIn.normal);
+	vec3 n = vec3(0.0);
+
+	if(texMode == 17){
+		n = normalize(2.0 * texture(normalMap, DataIn.tex_coord).rgb - 1.0);
+	}else{
+		n = normalize(DataIn.normal);
+	}
 	vec3 l = normalize(DataIn.lightDir);
 	vec3 e = normalize(DataIn.eye);
 
@@ -352,6 +360,9 @@ void main() {
 			colorOut = mat.diffuse * texel;
 	}else if(texMode == 16){
 		colorOut = texture(cubeMap, DataIn.skyboxTexCoord);
+	}else if(texMode == 17){
+		vec4 texelBump = texture(texmap14, DataIn.tex_coord);
+		colorOut = vec4((max(intensity*texelBump + spec, 0.2*texelBump)).rgb, 1.0);
 	}else{
 		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);

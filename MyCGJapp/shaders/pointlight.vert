@@ -4,9 +4,10 @@ uniform mat4 m_pvm;
 uniform mat4 m_viewModel;
 uniform mat4 m_model;
 uniform mat3 m_normal;
-
+uniform mat4 m_View;
 uniform vec4 l_pos;
 uniform int fogFlag;
+uniform int texMode;
 const float density = 0.01;
 
 uniform int dia;
@@ -47,6 +48,7 @@ out vec3 lLocalDir16; //lens
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
 in vec4 texCoord;
+in vec4 tangent;
 
 out float visibility;
 
@@ -61,6 +63,9 @@ out Data {
 out vec4 pos;
 
 void main () {
+
+	vec3 aux;
+	vec3 n, t, b;
 
 	pos = m_viewModel * position;
 	vec4 posLuz = m_model * position;
@@ -94,6 +99,24 @@ void main () {
 	lLocalDir14 = vec3(luzLocal14 - pos);
 	lLocalDir15 = vec3(luzLocal15 - pos);
 	lLocalDir16 = vec3(luzLocal16 - pos);
+
+	if(texMode == 17)  {  //convert eye and light vectors to tangent space
+
+		//Calculate components of TBN basis in eye space
+		t = normalize(m_normal * tangent.xyz);  
+		b = tangent.w * cross(n,t);
+
+		aux.x = dot(DataOut.lightDir, t);
+		aux.y = dot(DataOut.lightDir, b);
+		aux.z = dot(DataOut.lightDir, n);
+		DataOut.lightDir = normalize(aux);
+
+		aux.x = dot(DataOut.eye, t);
+		aux.y = dot(DataOut.eye, b);
+		aux.z = dot(DataOut.eye, n);
+		DataOut.eye = normalize(aux);
+	}
+
 
 	if(fogFlag == 1){
 		float distance = length(pos);
