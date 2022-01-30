@@ -53,10 +53,12 @@ in vec3 lLocalDir12;
 in vec3 lLocalDir13;
 in vec3 lLocalDir14; //spotlight
 in vec3 lLocalDir15; //spotlight
+in vec3 solDir;
 
 uniform int fogFlag;
 in vec4 pos;
 in float visibility;
+uniform bool shadowMode;
 
 in Data {
 	vec3 normal;
@@ -87,6 +89,13 @@ void main() {
 	float l_spotCutOff = 0.997f;
 	vec4 l_spotDir = spotLightDirection;
 	
+	if(shadowMode){  //constant color
+		colorOut = vec4(0.5, 0.5, 0.5, 1.0);
+		//if(fog == 1){
+		//	realColorOut = mix( fog_colour, realColorOut, visibility);
+		//}
+	
+	}else{
 	if (intensity > 0.0) {
 
 		vec3 h = normalize(l + e);
@@ -204,6 +213,17 @@ void main() {
 			attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
 			resultado += branco * intensity * attenuation;
 
+			l = normalize(solDir);
+			intensity = max(dot(n,l), 0.0);
+			h = normalize(l + e);
+			intSpec = max(dot(h,n), 0.0);
+			spec += mat.specular * pow(intSpec, mat.shininess);
+			if(dia == 1){
+				resultado += intensity ;
+			}else{
+				resultado += (intensity*0.5) ;
+			}
+
 			if(dia == 0){
 				dist = length(lLocalDir13);
 				l = normalize(lLocalDir13);
@@ -301,7 +321,10 @@ void main() {
 				colorOut = vec4(1.0,0.02,0.95,1.0);
 			}
 	}else if(texMode == 11){//balas
-			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			if(mapa == 1)
+				colorOut = vec4(max(mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+			else
+				colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 			if(dia == 1){
 				colorOut = colorOut * vec4(1.3,1.3,1.3,1.0);
 			}else{
@@ -336,8 +359,10 @@ void main() {
 		else
 			colorOut = mat.diffuse * texel;
 	}else{
-		//colorOut = vec4(max(resultado * mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
-		colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
+		if(mapa == 1)
+			colorOut = vec4(max(mat.diffuse, mat.ambient).rgb, mat.diffuse.a);
+		else
+			colorOut =  vec4(max(resultado*mat.diffuse + spec, mat.ambient).rgb, mat.diffuse.a);
 	}
 
 	//Luz neon para os billboards
@@ -365,4 +390,5 @@ void main() {
 		colorOut = mix(vec4(fogColor,1.0), colorOut, visibility);
 	}
 	
+	}
 }

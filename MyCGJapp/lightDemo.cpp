@@ -90,7 +90,7 @@ extern float mCompMatrix[COUNT_COMPUTED_MATRICES][16];
 /// The normal matrix
 extern float mNormal3x3[9];
 
-GLint texMode_uniformId;
+GLint texMode_uniformId, shadowMode_uniformId;
 GLint pvm_uniformId;
 GLint vm_uniformId;
 GLint m_uniformId;
@@ -99,6 +99,7 @@ GLint lPos_uniformId;
 GLint fogF;
 GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13;
 GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
+GLint sol_loc;
 GLint dia;
 GLint pointLights;
 GLint corVariavel_loc;
@@ -137,6 +138,9 @@ float cores[8][3] = { {1,0.32,0.76},
 //Variaveis fun mode
 bool minigame = false;
 
+bool desenhaShadows = false;
+bool desenhaReflexoes;
+
 // Variaveis criadas para o aviao
 float rotPlaneH;
 float rotPlaneV;
@@ -158,6 +162,7 @@ int pontos = 0;
 int imunidade;
 int pontosCounter;
 bool verAviao;
+float dificuldade = 0.0f;
 
 //variaveis para os avioes inimigos
 float posisaoXUm = posisaoX;
@@ -265,6 +270,7 @@ float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 	//{120.0f, 3.0f, 120.0f, 1.0} 
 	{88.0f, 3.0f, 88.0f, 1.0}
 };
+float sol[4] = { 700.0f, 400.0f, 250.0f, 1.0f };
 int contadorBofia = 0;
 int luzBofia = 0;
 float corLuz[4] = { 1.0f, 0.0f, 1.0f , 1.0 };
@@ -663,7 +669,7 @@ void renderMiniMapa() {
 	popMatrix(MODEL);
 
 	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_NEVER, 0x1, 0x1);
+	glStencilFunc(GL_NEVER, 0x2, 0x2);
 	glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
 	// send the material
@@ -1148,7 +1154,12 @@ void renderTorre() {
 			if (objId == 0) { //cone
 				glDepthMask(GL_FALSE);
 				glEnable(GL_BLEND);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				if (desenhaShadows) {
+					glBlendFunc(GL_DST_COLOR, GL_ZERO);
+				}
+				else {
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				}
 				scale(MODEL, 18.0f, 260.0f, 18.0f);
 			}
 			else if (objId == 1) { //torus de baixo
@@ -1480,15 +1491,55 @@ void renderCity() {
 	}
 }
 
+void renderAgua() {
+	GLint loc;
+	int objId = 0;
+	int use = 4;
+
+	glUniform1i(texMode_uniformId, 0);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	float dif[4];
+	if (desenhaReflexoes) {
+		dif[0] = 0.36f;
+		dif[1] = 0.73f;
+		dif[2] = 0.89f;
+		dif[3] = 0.3f;
+	}
+	else {
+		dif[0] = 0.36f;
+		dif[1] = 0.73f;
+		dif[2] = 0.89f;
+		dif[3] = 1.0f;
+	}
+	glUniform4fv(loc, 1, dif);
+
+	pushMatrix(MODEL);
+
+	//agua
+	translate(MODEL, -16.0f, -5.0f, -16.0f);
+	scale(MODEL, 1024.0f, 5.0f, 1024.0f);
+
+	drawMesh(use);
+	popMatrix(MODEL);
+}
+
 void renderChao() {
 
 	GLint loc;
-	int objId = 0;
+	int objId = 1;
 	int use = 4;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 10; j++) {
 			glUniform1i(texMode_uniformId, 0);
-			if (objId > 18) {
+			if (objId > 17) {
 				objId++;
 				continue;
 			}
@@ -1621,7 +1672,6 @@ void renderChao() {
 			drawMesh(use);
 			popMatrix(MODEL);
 			objId++;
-
 		}
 	}
 	for (int k = 0; k < 50; k++) {
@@ -1676,11 +1726,6 @@ void updateMisseis() {
 			popMatrix(MODEL);
 
 			//printf("rotL: %f  rotC: %f", infoMisseis[0][0], infoMisseis[0][1]);
-			if (!pause) {
-				infoMisseis[i][2] += 1.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-				infoMisseis[i][3] += 1.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-				infoMisseis[i][4] += 1.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
-			}
 		}
 	}
 }
@@ -1717,12 +1762,6 @@ void updateMisseisInimigos() {
 					popMatrix(MODEL);
 
 					//printf("rotL: %f  rotC: %f", infoMisseisUm[0][0], infoMisseisUm[0][1]);
-
-					if (!pause) {
-						infoMisseisUm[i][2] += 1.0f * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
-						infoMisseisUm[i][3] += 1.0f * sin(infoMisseisUm[i][1] * PI / 180);
-						infoMisseisUm[i][4] += 1.0f * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180);
-					}
 				}
 				if (infoMisseisUm[i][3] < 0.0f) {
 					infoMisseisUm[i][0] = 0.0f;
@@ -1746,11 +1785,7 @@ void updateMisseisInimigos() {
 					popMatrix(MODEL);
 
 					//printf("rotL: %f  rotC: %f", infoMisseisDois[0][0], infoMisseisDois[0][1]);
-					if (!pause) {
-						infoMisseisDois[i][2] += 1.0f * cos(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
-						infoMisseisDois[i][3] += 1.0f * sin(infoMisseisDois[i][1] * PI / 180);
-						infoMisseisDois[i][4] += 1.0f * sin(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180);
-					}
+
 				}
 				if (infoMisseisDois[i][3] < 0.0f) {
 					infoMisseisDois[i][0] = 0.0f;
@@ -1774,11 +1809,7 @@ void updateMisseisInimigos() {
 					popMatrix(MODEL);
 
 					//printf("rotL: %f  rotC: %f", infoMisseisTres[0][0], infoMisseisTres[0][1]);
-					if (!pause) {
-						infoMisseisTres[i][2] += 1.0f * cos(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
-						infoMisseisTres[i][3] += 1.0f * sin(infoMisseisTres[i][1] * PI / 180);
-						infoMisseisTres[i][4] += 1.0f * sin(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180);
-					}
+
 				}
 				if (infoMisseisTres[i][3] < 0.0f) {
 					infoMisseisTres[i][0] = 0.0f;
@@ -2596,11 +2627,58 @@ void renderObjetoAssimp() {
 	popMatrix(MODEL);
 }
 
+void renderObjetos() {
+
+	//nosso
+	nossoAviao = true;
+	if (imunidade > 0 && imunidade % 12 == 0) {
+		verAviao = !verAviao;
+	}
+	if (imunidade == 0) {
+		verAviao = true;
+	}
+	//if(verAviao)
+
+	if (desenhaShadows) {
+		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+	}
+
+	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
+
+	nossoAviao = false;
+	renderAviao(posisaoXUm, posisaoYUm, posisaoZUm, rotasaoCimaUm, rotasaoLadoUm, 0.0f, 0.0f);
+
+	renderAviao(posisaoXDois, posisaoYDois, posisaoZDois, rotasaoCimaDois, rotasaoLadoDois, 0.0f, 0.0f);
+
+	renderAviao(posisaoXTres, posisaoYTres, posisaoZTres, rotasaoCimaTres, rotasaoLadoTres, 0.0f, 0.0f);
+
+	renderCity();
+
+	renderChao();
+
+	renderSigns();
+
+	renderAros();
+
+	renderTorre();
+
+	if (!desenhaShadows) {
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+	}
+
+	renderArvores(496, 280, 496, 10, 10, 10, 0);
+
+	updateMisseis();
+
+	updateMisseisInimigos();
+
+}
+
 // ------------------------------------------------------------
 //
 // Render stufff
 //
-
 
 void renderScene(void) {
 
@@ -2617,7 +2695,7 @@ void renderScene(void) {
 	oldTimeSinceStart = timeSinceStart;
 
 	FrameCount++;
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	// load identity matrices
 	loadIdentity(VIEW);
 	loadIdentity(MODEL);
@@ -2661,6 +2739,7 @@ void renderScene(void) {
 		}
 		if (missilTimer == 60) {
 			missilTimer = 0;
+			dificuldade += 0.002f;
 		}
 
 		if (estaAcelerar && acelerasao < 2.0f) {
@@ -2820,6 +2899,10 @@ void renderScene(void) {
 	glUniform1i(tex_loc11, 11);
 	glUniform1i(tex_loc12, 12);
 
+	//para shadows
+	float mat[16];
+	GLfloat plano_chao[4] = { 0,1,0,0 };
+
 	//send the light position in eye coordinates
 	//glUniform4fv(lPos_uniformId, 1, lightPos); //efeito capacete do mineiro, ou seja lighPos foi definido em eye coord 
 
@@ -2869,52 +2952,129 @@ void renderScene(void) {
 
 	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
-
+	/*
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_EQUAL, 0x0, 0x0);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);*/
+	
+	
+	if (camY > -2.0f) {
+		desenhaReflexoes = true;
+		glEnable(GL_STENCIL_TEST);        // Escrever 1 no stencil buffer onde se for desenhar a reflexão e a sombra aka o tabuleiro
+		glStencilFunc(GL_NEVER, 0x1, 0x1);
+		glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
+		renderAgua();
+
+		glUniform1i(shadowMode_uniformId, 0);  //iluminação phong
+
+		// Desenhar apenas onde o stencil buffer esta a 1
+		glStencilFunc(GL_EQUAL, 0x1, 0x1);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+		// Render the reflected geometry
+		sol[1] *= (-1.0f);  //mirror the position of light
+		multMatrixPoint(VIEW, sol, res);
+		glUniform4fv(sol_loc, 1, res);
+		glUniform4fv(lPos_uniformId, 1, res);
+		pushMatrix(MODEL);
+		translate(MODEL, 0.0, -1.0, 0.0);
+		scale(MODEL, 1.0f, -1.0f, 1.0f);
+		glCullFace(GL_FRONT); //pq inverteu as cenas
+		renderObjetos();
+		renderObjetoAssimp();
+		//renderBumpCubo();
+		//renderEnvironmentObjects();
+		glCullFace(GL_BACK);
+		popMatrix(MODEL);
+
+		sol[1] *= (-1.0f);  //reset the light position
+		
+		multMatrixPoint(VIEW, sol, res);
+		glUniform4fv(sol_loc, 1, res);
+		glUniform4fv(lPos_uniformId, 1, res);
+
+		glEnable(GL_BLEND); //ta blend pq o chao ta meio transparente para se verem as reflexoes
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);		// Blend specular Ground with reflected geometry
+		
+		renderAgua();
+		desenhaReflexoes = false;
+
+
+		if (diaLigado) {
+			// Render the Shadows
+			desenhaShadows = true; //var que da fix no blendfunc e outros parametros gl
+			glUniform1i(shadowMode_uniformId, 1);  //Render with constant color
+			shadow_matrix(mat, plano_chao, sol);
+
+			glDisable(GL_DEPTH_TEST); //To force the shadow geometry to be rendered even if behind the floor
+
+			//Dark the color stored in color buffer
+			glBlendFunc(GL_DST_COLOR, GL_ZERO);
+			glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);//para n fazer mais shadows
+
+			pushMatrix(MODEL);
+			multMatrix(MODEL, mat);
+			renderObjetos();
+			renderObjetoAssimp();
+			//renderBumpCubo();
+			//renderEnvironmentObjects();
+			popMatrix(MODEL);
+
+			desenhaShadows = false;
+		}
+		
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+		
+		//render the geometry
+		loadIdentity(MODEL);
+		glUniform1i(shadowMode_uniformId, 0);
+		renderObjetos();
+		renderObjetoAssimp();
+		//renderBumpCubo();
+		//renderEnvironmentObjects();
+		
+	}
+	else {  //Camera behind the floor so render only the opaque objects
+		glUniform1i(shadowMode_uniformId, 0);
+		renderAgua();
+		renderObjetos();
+		renderObjetoAssimp();
+		//renderBumpCubo();
+		//renderEnvironmentObjects();
+	}
+	
 	if (!pause) {
 		respawnaAviao();
 		applyRotation();
+
+		for (int i = 0; i < N_MISSEIS_MAX; i++) {
+			infoMisseis[i][2] += 2.0f * cos(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseis[i][3] += 2.0f * sin(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseis[i][4] += 2.0f * sin(infoMisseis[i][0] * PI / 180) * cos(infoMisseis[i][1] * PI / 180) * deltaTime * 100;
+
+			infoMisseisUm[i][2] += (0.5f + dificuldade) * cos(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisUm[i][3] += (0.5f + dificuldade) * sin(infoMisseisUm[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisUm[i][4] += (0.5f + dificuldade) * sin(infoMisseisUm[i][0] * PI / 180) * cos(infoMisseisUm[i][1] * PI / 180) * deltaTime * 100;
+
+			infoMisseisDois[i][2] += (0.5f + dificuldade) * cos(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisDois[i][3] += (0.5f + dificuldade) * sin(infoMisseisDois[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisDois[i][4] += (0.5f + dificuldade) * sin(infoMisseisDois[i][0] * PI / 180) * cos(infoMisseisDois[i][1] * PI / 180) * deltaTime * 100;
+
+			infoMisseisTres[i][2] += (0.5f + dificuldade) * cos(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisTres[i][3] += (0.5f + dificuldade) * sin(infoMisseisTres[i][1] * PI / 180) * deltaTime * 100;
+			infoMisseisTres[i][4] += (0.5f + dificuldade) * sin(infoMisseisTres[i][0] * PI / 180) * cos(infoMisseisTres[i][1] * PI / 180) * deltaTime * 100;
+		}
 	}
+
+	//renderAgua();
+
+	//renderObjetos();
 
 	//renderAssimp
-	renderObjetoAssimp();
-
-	//nosso
-	nossoAviao = true;
-	if (imunidade > 0 && imunidade % 12 == 0) {
-		verAviao = !verAviao;
-	}
-	if (imunidade == 0) {
-		verAviao = true;
-	}
-	//if(verAviao)
-	renderAviao(posisaoX, posisaoY, posisaoZ, rotasaoCima, rotasaoLado, rotPlaneV, rotPlaneH);
-
-	nossoAviao = false;
-	renderAviao(posisaoXUm, posisaoYUm, posisaoZUm, rotasaoCimaUm, rotasaoLadoUm, 0.0f, 0.0f);
-
-	renderAviao(posisaoXDois, posisaoYDois, posisaoZDois, rotasaoCimaDois, rotasaoLadoDois, 0.0f, 0.0f);
-
-	renderAviao(posisaoXTres, posisaoYTres, posisaoZTres, rotasaoCimaTres, rotasaoLadoTres, 0.0f, 0.0f);
-
-	renderCity();
-
-	renderChao();
-
-	renderSigns();
-
-	renderArvores(496, 280, 496, 10, 10, 10, 0);
-
-	renderAros();
-
-	renderTorre();
-
-	updateMisseis();
-
-	updateMisseisInimigos();
+	//renderObjetoAssimp();
 
 	/*if (!bateu) {*/
 	handleCollisions();
@@ -2942,10 +3102,12 @@ void renderScene(void) {
 		loadIdentity(PROJECTION);
 		ortho(-40 * ratio, 40 * ratio, -40, 40, -500, 500);
 		glEnable(GL_STENCIL_TEST);
-		glStencilFunc(GL_EQUAL, 0x1, 0x1);
+		glStencilFunc(GL_EQUAL, 0x2, 0x2);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST);
+
+		renderAgua();
 
 		renderChao();
 
@@ -2991,21 +3153,22 @@ void renderScene(void) {
 		posisaoY += (0.3f + acelerasao) * sin(rotasaoCima * PI / 180) * deltaTime * 100;
 		posisaoZ += (0.3f + acelerasao) * sin(rotasaoLado * PI / 180) * cos(rotasaoCima * PI / 180) * deltaTime * 100;
 
-		posisaoXUm += (0.3f) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
-		posisaoYUm += (0.3f) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
-		posisaoZUm += (0.3f) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoXUm += (0.15f + dificuldade/2) * cos(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoYUm += (0.15f + dificuldade / 2) * sin(rotasaoCimaUm * PI / 180) * deltaTime * 100;
+		posisaoZUm += (0.15f + dificuldade / 2) * sin(rotasaoLadoUm * PI / 180) * cos(rotasaoCimaUm * PI / 180) * deltaTime * 100;
 
-		posisaoXDois += (0.3f) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
-		posisaoYDois += (0.3f) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
-		posisaoZDois += (0.3f) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoXDois += (0.15f + dificuldade / 2) * cos(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoYDois += (0.15f + dificuldade / 2) * sin(rotasaoCimaDois * PI / 180) * deltaTime * 100;
+		posisaoZDois += (0.15f + dificuldade / 2) * sin(rotasaoLadoDois * PI / 180) * cos(rotasaoCimaDois * PI / 180) * deltaTime * 100;
 
-		posisaoXTres += (0.3f) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
-		posisaoYTres += (0.3f) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
-		posisaoZTres += (0.3f) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoXTres += (0.15f + dificuldade / 2) * cos(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoYTres += (0.15f + dificuldade / 2) * sin(rotasaoCimaTres * PI / 180) * deltaTime * 100;
+		posisaoZTres += (0.15f + dificuldade / 2) * sin(rotasaoLadoTres * PI / 180) * cos(rotasaoCimaTres * PI / 180) * deltaTime * 100;
 
 		heatSeek();
 	}
 
+	printf("%f\n", dificuldade);
 	atualizaAviaoInfo();
 
 	for (int i = 0; i < 2; ++i) {
@@ -3337,6 +3500,7 @@ GLuint setupShaders() {
 	glLinkProgram(shader.getProgramIndex());
 
 	texMode_uniformId = glGetUniformLocation(shader.getProgramIndex(), "texMode");
+	shadowMode_uniformId = glGetUniformLocation(shader.getProgramIndex(), "shadowMode");
 	pvm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_pvm");
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
 	m_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_model");
@@ -3371,6 +3535,7 @@ GLuint setupShaders() {
 	luzLocal13_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal13");
 	luzLocal14_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal14");
 	luzLocal15_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal15");
+	sol_loc = glGetUniformLocation(shader.getProgramIndex(), "sol");
 	dia = glGetUniformLocation(shader.getProgramIndex(), "dia");
 	pointLights = glGetUniformLocation(shader.getProgramIndex(), "pointLights");
 	corVariavel_loc = glGetUniformLocation(shader.getProgramIndex(), "corVariavel");

@@ -25,6 +25,8 @@ uniform vec4 luzLocal12;
 uniform vec4 luzLocal13;
 uniform vec4 luzLocal14;
 uniform vec4 luzLocal15;
+uniform vec4 sol;
+
 
 out vec3 lLocalDir1;
 out vec3 lLocalDir2;
@@ -41,6 +43,7 @@ out vec3 lLocalDir12;
 out vec3 lLocalDir13;
 out vec3 lLocalDir14;
 out vec3 lLocalDir15;
+out vec3 solDir;
 
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
@@ -86,6 +89,7 @@ void main () {
 	lLocalDir13 = vec3(luzLocal13 - pos);
 	lLocalDir14 = vec3(luzLocal14 - pos);
 	lLocalDir15 = vec3(luzLocal15 - pos);
+	solDir = vec3(sol - pos);
 
 	if(fogFlag == 1){
 		float distance = length(pos);
