@@ -690,6 +690,130 @@ void renderMiniMapa() {
 	popMatrix(MODEL);
 }
 
+void renderWorld(){
+	// Render Sky Box
+	int objId = 4;
+	glUniform1i(texMode_uniformId, 16);
+
+	//it won't write anything to the zbuffer; all subsequently drawn scenery to be in front of the sky box. 
+	glDepthMask(GL_FALSE);
+	glFrontFace(GL_CW); // set clockwise vertex order to mean the front
+
+	pushMatrix(MODEL);
+	pushMatrix(VIEW);  //se quiser anular a translação
+
+	//  Fica mais realista se não anular a translação da câmara 
+	// Cancel the translation movement of the camera - de acordo com o tutorial do Antons
+	mMatrix[VIEW][12] = 0.0f;
+	mMatrix[VIEW][13] = 0.0f;
+	mMatrix[VIEW][14] = 0.0f;
+
+	scale(MODEL, 1000.0f, 1000.0f, 1000.0f);
+	translate(MODEL, -0.5f, -0.5f, -0.5f);
+
+	// send matrices to OGL
+	glUniformMatrix4fv(m_uniformId, 1, GL_FALSE, mMatrix[MODEL]); //Transformação de modelação do cubo unitário para o "Big Cube"
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+
+	glBindVertexArray(myMeshes[objId].vao);
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	popMatrix(MODEL);
+	popMatrix(VIEW);
+
+	glFrontFace(GL_CCW); // restore counter clockwise vertex order to mean the front
+	glDepthMask(GL_TRUE);
+	//end skybox
+}
+
+void renderCubeEnvironment() {
+	//ENVIRONMENT START
+	//Enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glUniform1i(texMode_uniformId, 18);
+
+	int objId = 4;
+	GLint loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 76.0f, 127.0f, 76.0f);
+
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	popMatrix(MODEL);
+	glDisable(GL_BLEND);
+	glUniform1i(texMode_uniformId, 0);
+
+}
+
+void renderBumpMapping() {
+	//BUMP MAP CUBE
+	GLint loc;
+	int objId = 4;
+	glUniform1i(texMode_uniformId, 17);
+
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 76.0f, 107.0f, 76.0f);
+
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	popMatrix(MODEL);
+
+	glUniform1i(texMode_uniformId, 0);
+	// BUMP END
+
+}
+
 void renderArvores(float x, float y, float z, float sx, float sy, float sz, int texture) {
 	//glDepthMask(GL_FALSE);
 	//glEnable(GL_BLEND);
@@ -2879,40 +3003,7 @@ void renderScene(void) {
 	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
 
-		// Render Sky Box
-	objId = 4;
-	glUniform1i(texMode_uniformId, 16);
-
-	//it won't write anything to the zbuffer; all subsequently drawn scenery to be in front of the sky box. 
-	glDepthMask(GL_FALSE);
-	glFrontFace(GL_CW); // set clockwise vertex order to mean the front
-
-	pushMatrix(MODEL);
-	pushMatrix(VIEW);  //se quiser anular a translação
-
-	//  Fica mais realista se não anular a translação da câmara 
-	// Cancel the translation movement of the camera - de acordo com o tutorial do Antons
-	mMatrix[VIEW][12] = 0.0f;
-	mMatrix[VIEW][13] = 0.0f;
-	mMatrix[VIEW][14] = 0.0f;
-
-	scale(MODEL, 1000.0f, 1000.0f, 1000.0f);
-	translate(MODEL, -0.5f, -0.5f, -0.5f);
-
-	// send matrices to OGL
-	glUniformMatrix4fv(m_uniformId, 1, GL_FALSE, mMatrix[MODEL]); //Transformação de modelação do cubo unitário para o "Big Cube"
-	computeDerivedMatrix(PROJ_VIEW_MODEL);
-	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-
-	glBindVertexArray(myMeshes[objId].vao);
-	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	popMatrix(MODEL);
-	popMatrix(VIEW);
-
-	glFrontFace(GL_CCW); // restore counter clockwise vertex order to mean the front
-	glDepthMask(GL_TRUE);
-	//end skybox
+	renderWorld();
 
 
 
@@ -2962,86 +3053,12 @@ void renderScene(void) {
 
 	updateMisseisInimigos();
 
+	renderBumpMapping();
 
-	//BUMP MAP CUBE
-	objId = 4;
-	glUniform1i(texMode_uniformId, 17);
+	renderCubeEnvironment();
 
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-	glUniform1f(loc, myMeshes[objId].mat.shininess);
-	pushMatrix(MODEL);
 
-	translate(MODEL, 76.0f, 107.0f, 76.0f);
 
-	// send matrices to OGL
-	computeDerivedMatrix(PROJ_VIEW_MODEL);
-	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
-	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-	computeNormalMatrix3x3();
-	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-	// Render mesh
-	glBindVertexArray(myMeshes[objId].vao);
-
-	if (!shader.isProgramValid()) {
-		printf("Program Not Valid!\n");
-		exit(1);
-	}
-	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-
-	popMatrix(MODEL);
-
-	glUniform1i(texMode_uniformId, 0);
-	// BUMP END
-
-	//ENVIRONMENT START
-		//Enable blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glUniform1i(texMode_uniformId, 18);
-
-	objId = 4;
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
-	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
-	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
-	glUniform1f(loc, myMeshes[objId].mat.shininess);
-	pushMatrix(MODEL);
-
-	translate(MODEL, 76.0f, 127.0f, 76.0f);
-
-	// send matrices to OGL
-	computeDerivedMatrix(PROJ_VIEW_MODEL);
-	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
-	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
-	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
-	computeNormalMatrix3x3();
-	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
-
-	// Render mesh
-	glBindVertexArray(myMeshes[objId].vao);
-
-	if (!shader.isProgramValid()) {
-		printf("Program Not Valid!\n");
-		exit(1);
-	}
-	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-
-	popMatrix(MODEL);
-	glDisable(GL_BLEND);
-	glUniform1i(texMode_uniformId, 0);
 
 
 	/*if (!bateu) {*/
