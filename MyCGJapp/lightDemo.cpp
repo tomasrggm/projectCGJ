@@ -501,6 +501,7 @@ void desenhaVidas() {
 	glViewport(0, 0, WinX, WinY);
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
+	glUniform1i(texMode_uniformId, 0);
 }
 
 void renderTexto() {
@@ -3007,6 +3008,7 @@ void renderScene(void) {
 
 
 
+
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_EQUAL, 0x0, 0x0);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
@@ -3057,7 +3059,34 @@ void renderScene(void) {
 
 	renderCubeEnvironment();
 
+	if (flareEffect && !spotlight_mode) {
 
+		int flarePos[2];
+		int m_viewport[4];
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+		pushMatrix(MODEL);
+		loadIdentity(MODEL);
+		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+		glUniform1i(texMode_uniformId, 15);
+
+		if (!project(luzesLocais[13], lightScreenPos, m_viewport))
+			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
+		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
+		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
+		popMatrix(MODEL);
+
+		//viewer looking down at  negative z direction
+		pushMatrix(PROJECTION);
+		loadIdentity(PROJECTION);
+		pushMatrix(VIEW);
+		loadIdentity(VIEW);
+		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
+		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
+		popMatrix(PROJECTION);
+		popMatrix(VIEW);
+		glUniform1i(texMode_uniformId, 0);
+	}
 
 
 
@@ -3181,40 +3210,16 @@ void renderScene(void) {
 		carroDaBofia();
 		rodaLuzDeCima();
 	}
+
+
+
 	fazGradienteLuz();
 	
-
 
 	renderTexto();
 	desenhaVidas();
 
-	if (flareEffect && !spotlight_mode) {
 
-		int flarePos[2];
-		int m_viewport[4];
-		glGetIntegerv(GL_VIEWPORT, m_viewport);
-
-		pushMatrix(MODEL);
-		loadIdentity(MODEL);
-		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
-		glUniform1i(texMode_uniformId, 15);
-
-		if (!project(luzesLocais[13], lightScreenPos, m_viewport))
-			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
-		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
-		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
-		popMatrix(MODEL);
-
-		//viewer looking down at  negative z direction
-		pushMatrix(PROJECTION);
-		loadIdentity(PROJECTION);
-		pushMatrix(VIEW);
-		loadIdentity(VIEW);
-		ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
-		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
-		popMatrix(PROJECTION);
-		popMatrix(VIEW);
-	}
 
 
 
