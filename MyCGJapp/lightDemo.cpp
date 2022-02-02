@@ -374,8 +374,7 @@ void render_flare(FLARE_DEF* flare, int lx, int ly, int* m_viewport) {  //lx, ly
 
 	// Render each element. To be used Texture Unit 0
 
-	glUniform1i(texMode_uniformId, 15); // draw modulated textured particles 
-	glUniform1i(tex_loc, 0);  //use TU 0
+	glUniform1i(tex_loc13, 0);  //use TU 0
 
 	for (i = 0; i < flare->nPieces; ++i)
 	{
@@ -509,6 +508,7 @@ void desenhaVidas() {
 	glViewport(0, 0, WinX, WinY);
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
+	glUniform1i(texMode_uniformId, 0);
 }
 
 void renderTexto() {
@@ -3220,6 +3220,7 @@ void renderScene(void) {
 		pushMatrix(MODEL);
 		loadIdentity(MODEL);
 		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
+		glUniform1i(texMode_uniformId, 15);
 
 		if (!project(lightPos, lightScreenPos, m_viewport))
 			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
@@ -3236,6 +3237,7 @@ void renderScene(void) {
 		render_flare(&AVTflare, flarePos[0], flarePos[1], m_viewport);
 		popMatrix(PROJECTION);
 		popMatrix(VIEW);
+		glUniform1i(texMode_uniformId, 0);
 	}
 
 	//renderAgua();
@@ -3244,6 +3246,13 @@ void renderScene(void) {
 
 	//renderAssimp
 	//renderObjetoAssimp();
+
+	renderBumpMapping();
+
+	renderCubeEnvironment();
+
+
+
 
 	/*if (!bateu) {*/
 	handleCollisions();
@@ -3368,7 +3377,11 @@ void renderScene(void) {
 		carroDaBofia();
 		rodaLuzDeCima();
 	}
+
+
+
 	fazGradienteLuz();
+	
 
 	renderTexto();
 	desenhaVidas();
@@ -3376,9 +3389,9 @@ void renderScene(void) {
 
 
 
+
 	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
 	glutSwapBuffers();
 }
 
@@ -3928,13 +3941,13 @@ void init()
 	amesh.mat.texCount = texcount;
 	myMeshes.push_back(amesh);
 
-	// create geometry and VAO of the quad for flare elements
+	// create geometry and VAO of the quad for flare elements 8
 	amesh = createQuad(1, 1);
 	myMeshes.push_back(amesh);
 
 	//Load flare from file
 	//Pode ter que se meter textures/ antes do flare.txt
-	loadFlareFile(&AVTflare, "flare.txt");
+	loadFlareFile(&AVTflare, "textures/flare.txt");
 
 	srand(time(NULL));
 

@@ -82,7 +82,7 @@ void main () {
 	}
 	DataOut.eye = vec3(-pos);
 
-	DataOut.skyboxTexCoord = vec3(m_model * position);	//Transforma��o de modela��o do cubo unit�rio 
+	DataOut.skyboxTexCoord = vec3(m_model * position);	//Transformação de modelação do cubo unitário 
 	DataOut.skyboxTexCoord.x = - DataOut.skyboxTexCoord.x; //Texturas mapeadas no interior logo negar a coordenada x
 
 	DataOut.tex_coord = texCoord.st;

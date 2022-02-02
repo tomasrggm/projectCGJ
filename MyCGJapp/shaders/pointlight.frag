@@ -118,6 +118,8 @@ void main() {
 		spec = mat.specular * pow(intSpec, mat.shininess);
 		resultado = branco * intensity;
 	}
+
+
 	
 	if(pointLights == 1){
 			dist = length(lLocalDir1);
@@ -298,6 +300,7 @@ void main() {
 				}
 			}
 	}
+
 
 	//texturas
 	if (texMode == 1){
