@@ -2865,6 +2865,7 @@ void renderScene(void) {
 			infoMisseisTres[missilIndexTres][4] = posisaoZTres + 0.0f;
 			missilIndexTres = (missilIndexTres + 1) % N_MISSEIS_MAX;
 		}
+
 		if (missilTimer == 60) {
 			missilTimer = 0;
 			dificuldade += 0.001f;
