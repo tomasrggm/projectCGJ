@@ -97,9 +97,12 @@ GLint m_uniformId;
 GLint normal_uniformId;
 GLint lPos_uniformId;
 GLint fogF;
-GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13;
-GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc;
+GLint tex_loc, tex_loc1, tex_loc2, tex_loc3, tex_loc4, tex_loc5, tex_loc6, tex_loc7, tex_loc8, tex_loc9, tex_loc10, tex_loc11, tex_loc12, tex_loc13, tex_loc14, tex_normalMap_loc, tex_loc16;
+GLint luzLocal1_loc, luzLocal2_loc, luzLocal3_loc, luzLocal4_loc, luzLocal5_loc, luzLocal6_loc, luzLocal7_loc, luzLocal8_loc, luzLocal9_loc, luzLocal10_loc, luzLocal11_loc, luzLocal12_loc, luzLocal13_loc, luzLocal14_loc, luzLocal15_loc, luzLocal16_loc;
 GLint sol_loc;
+GLint tex_cube_loc;
+GLint view_uniformId;
+
 GLint dia;
 GLint pointLights;
 GLint corVariavel_loc;
@@ -108,7 +111,7 @@ GLint spotLightDir_loc;
 GLint mapa;
 GLint assimp;
 
-GLuint TextureArray[13];
+GLuint TextureArray[17];
 
 //Particles
 int fireworks = 1;
@@ -254,8 +257,8 @@ float r = 10.0f;
 // Frame counting and FPS computation
 long myTime, timebase = 0, frame = 0;
 char s[32];
-float lightPos[4] = { 496.0f, 400.0f, 496.0f, 0.0f };
-float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
+float lightPos[4] = {496.0f, 400.0f, 496.0f, 0.0f};
+float luzesLocais[14][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{504.66f, 205.0f, 491.00f, 1.0},
 							{496.00f, 205.0f, 485.50f, 1.0},
 							{487.00f, 205.0f, 490.50f, 1.0},
@@ -267,8 +270,9 @@ float luzesLocais[13][4] = { {504.66f, 205.0f, 501.00f, 1.0},
 							{496.0f, 130.0f, 505.0f, 1.0},
 							{496.0f, 130.0f, 485.0f, 1.0},
 							{496.0f, 130.0f, 496.0f, 1.0},
-	//{120.0f, 3.0f, 120.0f, 1.0} 
-	{88.0f, 3.0f, 88.0f, 1.0}
+							//{120.0f, 3.0f, 120.0f, 1.0} 
+							{88.0f, 3.0f, 88.0f, 1.0},
+							{497.2f, 271.0f, 496.0f, 1.0},
 };
 float sol[4] = { 700.0f, 400.0f, 250.0f, 1.0f };
 int contadorBofia = 0;
@@ -692,6 +696,130 @@ void renderMiniMapa() {
 	drawMesh(use);
 	glDisable(GL_STENCIL_TEST);
 	popMatrix(MODEL);
+}
+
+void renderWorld(){
+	// Render Sky Box
+	int objId = 4;
+	glUniform1i(texMode_uniformId, 16);
+
+	//it won't write anything to the zbuffer; all subsequently drawn scenery to be in front of the sky box. 
+	glDepthMask(GL_FALSE);
+	glFrontFace(GL_CW); // set clockwise vertex order to mean the front
+
+	pushMatrix(MODEL);
+	pushMatrix(VIEW);  //se quiser anular a translação
+
+	//  Fica mais realista se não anular a translação da câmara 
+	// Cancel the translation movement of the camera - de acordo com o tutorial do Antons
+	mMatrix[VIEW][12] = 0.0f;
+	mMatrix[VIEW][13] = 0.0f;
+	mMatrix[VIEW][14] = 0.0f;
+
+	scale(MODEL, 1000.0f, 1000.0f, 1000.0f);
+	translate(MODEL, -0.5f, -0.5f, -0.5f);
+
+	// send matrices to OGL
+	glUniformMatrix4fv(m_uniformId, 1, GL_FALSE, mMatrix[MODEL]); //Transformação de modelação do cubo unitário para o "Big Cube"
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+
+	glBindVertexArray(myMeshes[objId].vao);
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	popMatrix(MODEL);
+	popMatrix(VIEW);
+
+	glFrontFace(GL_CCW); // restore counter clockwise vertex order to mean the front
+	glDepthMask(GL_TRUE);
+	//end skybox
+}
+
+void renderCubeEnvironment() {
+	//ENVIRONMENT START
+	//Enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glUniform1i(texMode_uniformId, 18);
+
+	int objId = 4;
+	GLint loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 76.0f, 127.0f, 76.0f);
+
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	popMatrix(MODEL);
+	glDisable(GL_BLEND);
+	glUniform1i(texMode_uniformId, 0);
+
+}
+
+void renderBumpMapping() {
+	//BUMP MAP CUBE
+	GLint loc;
+	int objId = 4;
+	glUniform1i(texMode_uniformId, 17);
+
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.diffuse);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[objId].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[objId].mat.shininess);
+	pushMatrix(MODEL);
+
+	translate(MODEL, 76.0f, 107.0f, 76.0f);
+
+	// send matrices to OGL
+	computeDerivedMatrix(PROJ_VIEW_MODEL);
+	glUniformMatrix4fv(view_uniformId, 1, GL_FALSE, mMatrix[VIEW]);
+	glUniformMatrix4fv(vm_uniformId, 1, GL_FALSE, mCompMatrix[VIEW_MODEL]);
+	glUniformMatrix4fv(pvm_uniformId, 1, GL_FALSE, mCompMatrix[PROJ_VIEW_MODEL]);
+	computeNormalMatrix3x3();
+	glUniformMatrix3fv(normal_uniformId, 1, GL_FALSE, mNormal3x3);
+
+	// Render mesh
+	glBindVertexArray(myMeshes[objId].vao);
+
+	if (!shader.isProgramValid()) {
+		printf("Program Not Valid!\n");
+		exit(1);
+	}
+	glDrawElements(myMeshes[objId].type, myMeshes[objId].numIndexes, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+
+	popMatrix(MODEL);
+
+	glUniform1i(texMode_uniformId, 0);
+	// BUMP END
+
 }
 
 void renderArvores(float x, float y, float z, float sx, float sy, float sz, int texture) {
@@ -2739,7 +2867,7 @@ void renderScene(void) {
 		}
 		if (missilTimer == 60) {
 			missilTimer = 0;
-			dificuldade += 0.002f;
+			dificuldade += 0.001f;
 		}
 
 		if (estaAcelerar && acelerasao < 2.0f) {
@@ -2898,6 +3026,11 @@ void renderScene(void) {
 	glUniform1i(tex_loc10, 10);
 	glUniform1i(tex_loc11, 11);
 	glUniform1i(tex_loc12, 12);
+	glUniform1i(tex_loc13, 0);
+	glUniform1i(tex_cube_loc, 13);
+	glUniform1i(tex_loc14, 14);
+	glUniform1i(tex_normalMap_loc, 15);
+	glUniform1i(tex_loc16, 16);
 
 	//para shadows
 	float mat[16];
@@ -2911,32 +3044,34 @@ void renderScene(void) {
 	multMatrixPoint(VIEW, lightPos, res);   //lightPos definido em World Coord so is converted to eye space
 	glUniform4fv(lPos_uniformId, 1, res);
 
-	multMatrixPoint(VIEW, luzesLocais[0], res);
-	glUniform4fv(luzLocal1_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[1], res);
-	glUniform4fv(luzLocal2_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[2], res);
-	glUniform4fv(luzLocal3_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[3], res);
-	glUniform4fv(luzLocal4_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[4], res);
-	glUniform4fv(luzLocal5_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[5], res);
-	glUniform4fv(luzLocal6_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[6], res);
-	glUniform4fv(luzLocal7_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[7], res);
-	glUniform4fv(luzLocal8_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[8], res);
-	glUniform4fv(luzLocal9_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[9], res);
-	glUniform4fv(luzLocal10_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[10], res);
-	glUniform4fv(luzLocal11_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[11], res);
-	glUniform4fv(luzLocal12_loc, 1, res);
-	multMatrixPoint(VIEW, luzesLocais[12], res);
-	glUniform4fv(luzLocal13_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[0], res);
+		glUniform4fv(luzLocal1_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[1], res);
+		glUniform4fv(luzLocal2_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[2], res);
+		glUniform4fv(luzLocal3_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[3], res);
+		glUniform4fv(luzLocal4_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[4], res);
+		glUniform4fv(luzLocal5_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[5], res);
+		glUniform4fv(luzLocal6_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[6], res);
+		glUniform4fv(luzLocal7_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[7], res);
+		glUniform4fv(luzLocal8_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[8], res);
+		glUniform4fv(luzLocal9_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[9], res);
+		glUniform4fv(luzLocal10_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[10], res);
+		glUniform4fv(luzLocal11_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[11], res);
+		glUniform4fv(luzLocal12_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[12], res);
+		glUniform4fv(luzLocal13_loc, 1, res);
+		multMatrixPoint(VIEW, luzesLocais[13], res);
+		glUniform4fv(luzLocal16_loc, 1, res);
 
 	float loc14[4] = { aabb.luzEsquerda[0],aabb.luzEsquerda[1],aabb.luzEsquerda[2],1.0f };
 	multMatrixPoint(VIEW, loc14, res);
@@ -2951,6 +3086,8 @@ void renderScene(void) {
 	glUniform4fv(spotLightDir_loc, 1, spotDir);
 
 	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
+
+	renderWorld();
 
 	/*
 	glEnable(GL_STENCIL_TEST);
@@ -3069,6 +3206,10 @@ void renderScene(void) {
 		}
 	}
 
+	renderBumpMapping();
+
+	renderCubeEnvironment();
+
 	//renderAgua();
 
 	//renderObjetos();
@@ -3168,7 +3309,7 @@ void renderScene(void) {
 		heatSeek();
 	}
 
-	printf("%f\n", dificuldade);
+	//printf("%f\n", dificuldade);
 	atualizaAviaoInfo();
 
 	for (int i = 0; i < 2; ++i) {
@@ -3230,6 +3371,11 @@ void renderScene(void) {
 		popMatrix(PROJECTION);
 		popMatrix(VIEW);
 	}
+
+
+	glBindTexture(GL_TEXTURE_2D, TextureArray[0]);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
 	glutSwapBuffers();
 }
 
@@ -3505,6 +3651,7 @@ GLuint setupShaders() {
 	vm_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_viewModel");
 	m_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_model");
 	normal_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_normal");
+	view_uniformId = glGetUniformLocation(shader.getProgramIndex(), "m_View");
 	lPos_uniformId = glGetUniformLocation(shader.getProgramIndex(), "l_pos");
 	tex_loc = glGetUniformLocation(shader.getProgramIndex(), "texmap");
 	tex_loc1 = glGetUniformLocation(shader.getProgramIndex(), "texmap1");
@@ -3520,6 +3667,9 @@ GLuint setupShaders() {
 	tex_loc11 = glGetUniformLocation(shader.getProgramIndex(), "texmap11");
 	tex_loc12 = glGetUniformLocation(shader.getProgramIndex(), "texmap12");
 	tex_loc13 = glGetUniformLocation(shader.getProgramIndex(), "texmap13");
+	tex_loc14 = glGetUniformLocation(shader.getProgramIndex(), "texmap14");
+	tex_normalMap_loc = glGetUniformLocation(shader.getProgramIndex(), "normalMap");
+	tex_loc16 = glGetUniformLocation(shader.getProgramIndex(), "texmap16");
 	luzLocal1_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal1");
 	luzLocal2_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal2");
 	luzLocal3_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal3");
@@ -3535,6 +3685,8 @@ GLuint setupShaders() {
 	luzLocal13_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal13");
 	luzLocal14_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal14");
 	luzLocal15_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal15");
+	luzLocal16_loc = glGetUniformLocation(shader.getProgramIndex(), "luzLocal16");
+	tex_cube_loc = glGetUniformLocation(shader.getProgramIndex(), "cubeMap");
 	sol_loc = glGetUniformLocation(shader.getProgramIndex(), "sol");
 	dia = glGetUniformLocation(shader.getProgramIndex(), "dia");
 	pointLights = glGetUniformLocation(shader.getProgramIndex(), "pointLights");
@@ -3588,7 +3740,7 @@ void init()
 	camY = r * sin(beta * 3.14f / 180.0f);
 
 	//texturas
-	glGenTextures(13, TextureArray);
+	glGenTextures(17, TextureArray);
 	Texture2D_Loader(TextureArray, "textures/Flor.png", 0);
 	Texture2D_Loader(TextureArray, "textures/grass.jpg", 1);
 	Texture2D_Loader(TextureArray, "textures/lines.jpg", 2);
@@ -3602,6 +3754,17 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/Plane.png", 10);
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
 	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
+
+	const char* filenames[] = { "textures/posx.jpg", "textures/negx.jpg", "textures/posy.jpg", "textures/negy.jpg", "textures/posz.jpg", "textures/negz.jpg" };
+	TextureCubeMap_Loader(TextureArray, filenames, 13);
+	Texture2D_Loader(TextureArray, "textures/stone.tga", 14);
+	Texture2D_Loader(TextureArray, "textures/normal.tga", 15);
+	Texture2D_Loader(TextureArray, "textures/lightwood.tga", 16);
+	
+
+	
+
+
 	//Flare elements textures
 	glGenTextures(5, FlareTextureArray);
 	Texture2D_Loader(FlareTextureArray, "textures/crcl.tga", 0);
@@ -3658,7 +3821,15 @@ void init()
 	glBindTexture(GL_TEXTURE_2D, TextureArray[11]);
 	glActiveTexture(GL_TEXTURE12);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[12]);
-
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[13]);
+	glActiveTexture(GL_TEXTURE14);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[14]);
+	glActiveTexture(GL_TEXTURE15);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[15]);
+	glActiveTexture(GL_TEXTURE16);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[16]);
+	
 	float amb[] = { 0.15f, 0.10f, 0.2f, 1.0f };
 	//float amb[] = { 0.15f, 0.05f, 0.3f, 1.0f};
 	float diff[] = { 1.0f, 0.86, 0.97f, 1.0f };
@@ -3759,6 +3930,7 @@ void init()
 	myMeshes.push_back(amesh);
 
 	//Load flare from file
+	//Pode ter que se meter textures/ antes do flare.txt
 	loadFlareFile(&AVTflare, "flare.txt");
 
 	srand(time(NULL));

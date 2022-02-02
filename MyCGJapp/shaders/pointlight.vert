@@ -4,9 +4,10 @@ uniform mat4 m_pvm;
 uniform mat4 m_viewModel;
 uniform mat4 m_model;
 uniform mat3 m_normal;
-
+uniform mat4 m_View;
 uniform vec4 l_pos;
 uniform int fogFlag;
+uniform int texMode;
 const float density = 0.01;
 
 uniform int dia;
@@ -25,6 +26,7 @@ uniform vec4 luzLocal12;
 uniform vec4 luzLocal13;
 uniform vec4 luzLocal14;
 uniform vec4 luzLocal15;
+uniform vec4 luzLocal16;
 uniform vec4 sol;
 
 
@@ -43,11 +45,13 @@ out vec3 lLocalDir12;
 out vec3 lLocalDir13;
 out vec3 lLocalDir14;
 out vec3 lLocalDir15;
+out vec3 lLocalDir16; //lens
 out vec3 solDir;
 
 in vec4 position;
 in vec4 normal;    //por causa do gerador de geometria
 in vec4 texCoord;
+in vec4 tangent;
 
 out float visibility;
 
@@ -56,11 +60,16 @@ out Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
+	vec3 skyboxTexCoord;
+	vec3 reflected;
 } DataOut;
 
 out vec4 pos;
 
 void main () {
+
+	vec3 aux;
+	vec3 n, t, b;
 
 	pos = m_viewModel * position;
 	vec4 posLuz = m_model * position;
@@ -72,6 +81,10 @@ void main () {
 		DataOut.lightDir = vec3(0.0, 0.0, 0.0);
 	}
 	DataOut.eye = vec3(-pos);
+
+	DataOut.skyboxTexCoord = vec3(m_model * position);	//Transforma��o de modela��o do cubo unit�rio 
+	DataOut.skyboxTexCoord.x = - DataOut.skyboxTexCoord.x; //Texturas mapeadas no interior logo negar a coordenada x
+
 	DataOut.tex_coord = texCoord.st;
 
 	lLocalDir1 = vec3(luzLocal1 - pos);
@@ -89,7 +102,25 @@ void main () {
 	lLocalDir13 = vec3(luzLocal13 - pos);
 	lLocalDir14 = vec3(luzLocal14 - pos);
 	lLocalDir15 = vec3(luzLocal15 - pos);
+	lLocalDir16 = vec3(luzLocal16 - pos);
 	solDir = vec3(sol - pos);
+
+	if(texMode == 17)  {  //convert eye and light vectors to tangent space
+
+		//Calculate components of TBN basis in eye space
+		t = normalize(m_normal * tangent.xyz);  
+		b = tangent.w * cross(n,t);
+
+		aux.x = dot(DataOut.lightDir, t);
+		aux.y = dot(DataOut.lightDir, b);
+		aux.z = dot(DataOut.lightDir, n);
+		DataOut.lightDir = normalize(aux);
+
+		aux.x = dot(DataOut.eye, t);
+		aux.y = dot(DataOut.eye, b);
+		aux.z = dot(DataOut.eye, n);
+		DataOut.eye = normalize(aux);
+	}
 
 	if(fogFlag == 1){
 		float distance = length(pos);

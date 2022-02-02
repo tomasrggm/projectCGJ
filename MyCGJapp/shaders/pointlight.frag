@@ -28,6 +28,11 @@ uniform sampler2D texmap11;
 uniform sampler2D texmap12;
 uniform sampler2D texmap13;
 uniform	sampler2D texUnitDiff;
+uniform samplerCube cubeMap;
+uniform mat4 m_View;
+uniform sampler2D normalMap;
+uniform sampler2D texmap14;
+uniform sampler2D texmap16;
 
 uniform int pointLights;
 uniform vec4 corVariavel;
@@ -53,11 +58,13 @@ in vec3 lLocalDir12;
 in vec3 lLocalDir13;
 in vec3 lLocalDir14; //spotlight
 in vec3 lLocalDir15; //spotlight
+in vec3 lLocalDir16; //lens
 in vec3 solDir;
 
 uniform int fogFlag;
 in vec4 pos;
 in float visibility;
+const float reflect_factor = 0.9;
 uniform bool shadowMode;
 
 in Data {
@@ -65,10 +72,12 @@ in Data {
 	vec3 eye;
 	vec3 lightDir;
 	vec2 tex_coord;
+	vec3 skyboxTexCoord;
+	vec3 reflected;
 } DataIn;
 
 void main() {
-	vec4 texel, texel1;
+	vec4 texel, texel1, cube_texel;
 	vec4 branco = vec4(1.0, 1.0, 1.0, 1.0);
 	vec4 vermelho = vec4(1.0, 0.0, 0.0, 1.0);
 	vec4 azul = vec4(0.0, 0.3, 1.0, 1.0);
@@ -77,7 +86,13 @@ void main() {
 	float quadratic = 0.0007f;
 
 	vec3 h;
-	vec3 n = normalize(DataIn.normal);
+	vec3 n = vec3(0.0);
+
+	if(texMode == 17){
+		n = normalize(2.0 * texture(normalMap, DataIn.tex_coord).rgb - 1.0);
+	}else{
+		n = normalize(DataIn.normal);
+	}
 	vec3 l = normalize(DataIn.lightDir);
 	vec3 e = normalize(DataIn.eye);
 
@@ -205,6 +220,16 @@ void main() {
 			resultado += branco * intensity * attenuation;
 
 			dist = length(lLocalDir12);
+			l = normalize(lLocalDir12);
+			intensity = max(dot(n,l), 0.0);
+			h = normalize(l + e);
+			intSpec = max(dot(h,n), 0.0);
+			spec += (mat.specular * pow(intSpec, mat.shininess)) * attenuation;
+			attenuation = 1.0 / (constant + linear * dist + quadratic * (dist * dist));
+			resultado += branco * intensity * attenuation;
+
+			//lens flare
+			dist = length(lLocalDir16);
 			l = normalize(lLocalDir12);
 			intensity = max(dot(n,l), 0.0);
 			h = normalize(l + e);
@@ -358,6 +383,20 @@ void main() {
 		if((texel.a == 0.0)  || (mat.diffuse.a == 0.0) ) discard;
 		else
 			colorOut = mat.diffuse * texel;
+	}else if(texMode == 16){
+		colorOut = texture(cubeMap, DataIn.skyboxTexCoord);
+	}else if(texMode == 17){
+		vec4 texelBump = texture(texmap14, DataIn.tex_coord);
+		colorOut = vec4((max(intensity*texelBump + spec, 0.2*texelBump)).rgb, 1.0);
+	}else if(texMode == 18){
+		vec3 reflected1 = vec3 (transpose(m_View) * vec4 (vec3(reflect(-e, n)), 0.0)); //reflection vector in world coord
+		reflected1.x= -reflected1.x;   
+		cube_texel = texture(cubeMap, reflected1);
+		vec4 texelMap = texture(texmap16, DataIn.tex_coord);  // texel from lighwood.tga
+		vec4 aux_color = mix(texelMap, cube_texel, reflect_factor);
+		aux_color = max(intensity*aux_color + spec, 0.1*aux_color);
+	    colorOut = vec4(aux_color.rgb, 1.0); 
+	  //colorOut = vec4(cube_texel.rgb, 1.0);
 	}else{
 		if(mapa == 1)
 			colorOut = vec4(max(mat.diffuse, mat.ambient).rgb, mat.diffuse.a);
