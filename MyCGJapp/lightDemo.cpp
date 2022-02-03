@@ -3697,6 +3697,7 @@ GLuint setupShaders() {
 	glBindAttribLocation(shader.getProgramIndex(), VERTEX_COORD_ATTRIB, "position");
 	glBindAttribLocation(shader.getProgramIndex(), NORMAL_ATTRIB, "normal");
 	glBindAttribLocation(shader.getProgramIndex(), TEXTURE_COORD_ATTRIB, "texCoord");
+	glBindAttribLocation(shader.getProgramIndex(), TANGENT_ATTRIB, "tangent");
 
 	glLinkProgram(shader.getProgramIndex());
 
@@ -3881,7 +3882,7 @@ void init()
 	glActiveTexture(GL_TEXTURE14);
 	glBindTexture(GL_TEXTURE_2D, TextureArray[14]);
 	glActiveTexture(GL_TEXTURE15);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[15]);
+	glBindTexture(GL_TEXTURE_2D, TextureArray[15]);
 	glActiveTexture(GL_TEXTURE16);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, TextureArray[16]);
 	

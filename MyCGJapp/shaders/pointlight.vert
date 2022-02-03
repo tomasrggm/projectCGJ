@@ -118,7 +118,7 @@ void main () {
 
 		aux.x = dot(DataOut.eye, t);
 		aux.y = dot(DataOut.eye, b);
-		aux.z = dot(DataOut.eye, n);
+		aux.z = dot(DataOut.eye, DataOut.normal);
 		DataOut.eye = normalize(aux);
 	}
 
