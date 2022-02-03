@@ -753,7 +753,8 @@ void renderCubeEnvironment() {
 	glUniform1f(loc, myMeshes[objId].mat.shininess);
 	pushMatrix(MODEL);
 
-	translate(MODEL, 76.0f, 127.0f, 76.0f);
+	translate(MODEL, 720.0f, 1.0f, 624.0f);
+	scale(MODEL, 32.0f, 110.0f, 32.0f);
 
 	// send matrices to OGL
 	computeDerivedMatrix(PROJ_VIEW_MODEL);
@@ -796,6 +797,7 @@ void renderBumpMapping() {
 	pushMatrix(MODEL);
 
 	translate(MODEL, 76.0f, 107.0f, 76.0f);
+	scale(MODEL, 32.0f, 90.0f, 32.0f);
 
 	// send matrices to OGL
 	computeDerivedMatrix(PROJ_VIEW_MODEL);
@@ -1575,7 +1577,7 @@ void renderCity() {
 	for (int i = 0; i < Q_PREDIOS; i++) {
 		for (int j = 0; j < Q_PREDIOS; j++) {
 
-			if (alturaPredios[i][j] != 0) {
+			if (alturaPredios[i][j] != 0 && (i != 15 || j != 13)) {
 				// send the material
 				loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
 				glUniform4fv(loc, 1, myMeshes[4].mat.ambient);
@@ -1619,6 +1621,32 @@ void renderCity() {
 	}
 }
 
+void renderAzul() {
+	GLint loc;
+	int objId = 0;
+	int use = 4;
+
+	glUniform1i(texMode_uniformId, 0);
+
+	// send the material
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.ambient");
+	glUniform4fv(loc, 1, myMeshes[use].mat.ambient);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.specular");
+	glUniform4fv(loc, 1, myMeshes[use].mat.specular);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.shininess");
+	glUniform1f(loc, myMeshes[use].mat.shininess);
+	loc = glGetUniformLocation(shader.getProgramIndex(), "mat.diffuse");
+	float dif[4] = { 0.36f, 0.73f, 0.89f, 0.7f };
+	glUniform4fv(loc, 1, dif);
+
+	pushMatrix(MODEL);
+
+	translate(MODEL, -16.0f, -98.0f, -16.0f);
+	scale(MODEL, 1160.0f, 5.0f, 1150.0f);
+
+	drawMesh(use);
+	popMatrix(MODEL);
+}
 void renderAgua() {
 	GLint loc;
 	int objId = 0;
@@ -1645,16 +1673,23 @@ void renderAgua() {
 		dif[0] = 0.36f;
 		dif[1] = 0.73f;
 		dif[2] = 0.89f;
-		dif[3] = 1.0f;
+		dif[3] = 0.7f;
 	}
+	glDepthMask(GL_FALSE);
 	glUniform4fv(loc, 1, dif);
 
 	pushMatrix(MODEL);
 
 	//agua
-	translate(MODEL, -16.0f, -5.0f, -16.0f);
+	if (!desenhaReflexoes && !desenhaShadows) {
+		translate(MODEL, -16.0f, -6.0f, -16.0f);
+	}
+	else {
+		translate(MODEL, -16.0f, -5.0f, -16.0f);
+	}
 	scale(MODEL, 1024.0f, 5.0f, 1024.0f);
 
+	glDepthMask(GL_TRUE);
 	drawMesh(use);
 	popMatrix(MODEL);
 }
@@ -3089,7 +3124,7 @@ void renderScene(void) {
 	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
 	renderWorld();
-
+	renderAzul();
 	/*
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_EQUAL, 0x0, 0x0);
@@ -3135,7 +3170,7 @@ void renderScene(void) {
 		glEnable(GL_BLEND); //ta blend pq o chao ta meio transparente para se verem as reflexoes
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);		// Blend specular Ground with reflected geometry
 		
-		renderAgua();
+		//renderAgua();
 		desenhaReflexoes = false;
 
 
@@ -3171,13 +3206,15 @@ void renderScene(void) {
 		glUniform1i(shadowMode_uniformId, 0);
 		renderObjetos();
 		renderObjetoAssimp();
+		//renderAgua();
+		renderAzul();
 		//renderBumpCubo();
 		//renderEnvironmentObjects();
 		
 	}
 	else {  //Camera behind the floor so render only the opaque objects
 		glUniform1i(shadowMode_uniformId, 0);
-		renderAgua();
+		//renderAgua();
 		renderObjetos();
 		renderObjetoAssimp();
 		//renderBumpCubo();
@@ -3247,9 +3284,9 @@ void renderScene(void) {
 	//renderAssimp
 	//renderObjetoAssimp();
 
-	renderBumpMapping();
+	//renderBumpMapping();
 
-	renderCubeEnvironment();
+	//renderCubeEnvironment();
 
 
 
@@ -3312,6 +3349,7 @@ void renderScene(void) {
 		updateMisseis();
 
 		updateMisseisInimigos();
+		renderCubeEnvironment(); ///
 
 		glDisable(GL_STENCIL_TEST);
 		glEnable(GL_DEPTH_TEST);
@@ -3450,6 +3488,7 @@ void processKeys(unsigned char key, int xx, int yy)
 		posisaoZ = 0.0f;
 		rotasaoCima = 0.0f;
 		rotasaoLado = 0.0f;
+		dificuldade = 0.0f;
 		break;
 	case 'a':
 		if (rotPlaneH > -45.0f) {
@@ -3961,6 +4000,9 @@ void init()
 				|| (i == 11 && j == 2) || (i == 12 && j == 3) || (i == 13 && j == 4) || (i == 14 && j == 5) || (i == 15 && j == 6) || (i == 16 && j == 7)
 				|| (i == 17 && j == 8) || (i == 18 && j == 9) || (i == 19 && j == 10) || (i == 20 && j == 11) || (i > 8 && i < 12 && j > 8 && j < 12)) {
 				alturaPredios[i][j] = 0;
+			}
+			else if ((i == 15 && j == 13)) {
+				alturaPredios[i][j] = 111;
 			}
 			else {
 				alturaPredios[i][j] = (rand() % 75) + 25;
