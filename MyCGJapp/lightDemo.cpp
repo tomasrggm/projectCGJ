@@ -531,7 +531,7 @@ void renderTexto() {
 	ortho(m_viewport[0], m_viewport[0] + m_viewport[2] - 1, m_viewport[1], m_viewport[1] + m_viewport[3] - 1, -1, 1);
 	//RenderText(shaderText, "This is a sample text", 25.0f, 25.0f, 1.0f, 0.5f, 0.8f, 0.2f);
 	//RenderText(shaderText, "CGJ Light and Text Rendering Demo", 440.0f, 570.0f, 0.5f, 0.3, 0.7f, 0.9f);
-	string msg = "Lives: " + std::to_string(vidas) + "  Points : " + std::to_string(pontos);
+	string msg = "Velocidade: " + std::to_string((int) ((0.3 + acelerasao)*300)) + "Km/H  Points : " + std::to_string(pontos);
 	RenderText(shaderText, msg, 25.0, 25.0, 1.0f, 0.35f, 0.85f, 1.0f);
 	if (vidas == 0) {
 		RenderText(shaderText, "You died", WinX / 2.85, WinY / 2, 2.5f, 0.3, 0.7f, 0.9f);
@@ -796,8 +796,10 @@ void renderBumpMapping() {
 	glUniform1f(loc, myMeshes[objId].mat.shininess);
 	pushMatrix(MODEL);
 
-	translate(MODEL, 76.0f, 107.0f, 76.0f);
-	scale(MODEL, 32.0f, 90.0f, 32.0f);
+	translate(MODEL, 152.0f, 2.0f, 608.0f);
+	scale(MODEL, 2.0f, 1.0f, 16.0f);
+	//translate(MODEL, 76.0f, 107.0f, 153.0f);
+	//scale(MODEL, 32.0f, 90.0f, 32.0f);
 
 	// send matrices to OGL
 	computeDerivedMatrix(PROJ_VIEW_MODEL);
@@ -1754,7 +1756,7 @@ void renderChao() {
 			}
 			else if (objId == 1) { //linha combojo
 				translate(MODEL, 81.0f, 0.0f, -16.0f);
-				scale(MODEL, 14.0f, 1.1f, 1074.0f);
+				scale(MODEL, 14.0f, 1.1f, 1150.0f);
 			}
 			else if (objId == 2) { //parque
 				glUniform1i(texMode_uniformId, 2);
@@ -2561,7 +2563,7 @@ void handleCollisions() {
 	}
 
 	if (checkaColisaoComAros()) {
-		acelerasao += 0.02f * deltaTime * 100;
+		acelerasao += 0.005f * deltaTime * 100;
 	}
 
 }
@@ -2785,7 +2787,7 @@ void renderObjetoAssimp() {
 	glUniform1i(assimp, 0);
 	posicaoComboio -= 0.5f;
 	if (posicaoComboio < 0.0f) {
-		posicaoComboio = 1050.0f;
+		posicaoComboio = 1120.0f;
 	}
 	popMatrix(MODEL);
 }
@@ -2907,11 +2909,11 @@ void renderScene(void) {
 		}
 
 		if (estaAcelerar && acelerasao < 2.0f) {
-			acelerasao += 0.05f * deltaTime * 100;
+			acelerasao += 0.01f * deltaTime * 100;
 		}
 		else {
 			if (acelerasao > 0.0f) {
-				acelerasao -= 0.005f * deltaTime * 100;
+				acelerasao -= 0.001f * deltaTime * 100;
 			}
 		}
 
@@ -3123,7 +3125,10 @@ void renderScene(void) {
 
 	int objId = 0; //id of the object mesh - to be used as index of mesh: Mymeshes[objID] means the current mesh
 
-	renderWorld();
+	if (diaLigado) {
+		renderWorld();
+	}
+
 	renderAzul();
 	/*
 	glEnable(GL_STENCIL_TEST);
@@ -3248,7 +3253,7 @@ void renderScene(void) {
 
 	renderCubeEnvironment();
 
-	if (flareEffect && !spotlight_mode) {
+	if (flareEffect && !spotlight_mode && diaLigado) {
 
 		int flarePos[2];
 		int m_viewport[4];
@@ -3259,7 +3264,7 @@ void renderScene(void) {
 		computeDerivedMatrix(PROJ_VIEW_MODEL);  //pvm to be applied to lightPost. pvm is used in project function
 		glUniform1i(texMode_uniformId, 15);
 
-		if (!project(lightPos, lightScreenPos, m_viewport))
+		if (!project(sol, lightScreenPos, m_viewport))
 			printf("Error in getting projected light in screen\n");  //Calculate the window Coordinates of the light position: the projected position of light on viewport
 		flarePos[0] = clampi((int)lightScreenPos[0], m_viewport[0], m_viewport[0] + m_viewport[2] - 1);
 		flarePos[1] = clampi((int)lightScreenPos[1], m_viewport[1], m_viewport[1] + m_viewport[3] - 1);
@@ -3811,7 +3816,7 @@ void init()
 	Texture2D_Loader(TextureArray, "textures/Plane-chan.png", 11);
 	Texture2D_Loader(TextureArray, "textures/Particla.tga", 12);
 
-	const char* filenames[] = { "textures/posx.jpg", "textures/negx.jpg", "textures/posy.jpg", "textures/negy.jpg", "textures/posz.jpg", "textures/negz.jpg" };
+	const char* filenames[] = { "textures/right.jpg", "textures/left.jpg", "textures/top.jpg", "textures/bottom.jpg", "textures/front.jpg", "textures/back.jpg" };
 	TextureCubeMap_Loader(TextureArray, filenames, 13);
 	Texture2D_Loader(TextureArray, "textures/stone.tga", 14);
 	Texture2D_Loader(TextureArray, "textures/normal.tga", 15);
@@ -3823,11 +3828,11 @@ void init()
 
 	//Flare elements textures
 	glGenTextures(5, FlareTextureArray);
-	Texture2D_Loader(FlareTextureArray, "textures/crcl.tga", 0);
-	Texture2D_Loader(FlareTextureArray, "textures/flar.tga", 1);
-	Texture2D_Loader(FlareTextureArray, "textures/hxgn.tga", 2);
-	Texture2D_Loader(FlareTextureArray, "textures/ring.tga", 3);
-	Texture2D_Loader(FlareTextureArray, "textures/sun.tga", 4);
+	Texture2D_Loader(FlareTextureArray, "textures/crcl.png", 0);
+	Texture2D_Loader(FlareTextureArray, "textures/flar.png", 1);
+	Texture2D_Loader(FlareTextureArray, "textures/hxgn.png", 2);
+	Texture2D_Loader(FlareTextureArray, "textures/ring.png", 3);
+	Texture2D_Loader(FlareTextureArray, "textures/sun.png", 4);
 
 	//---- cenas para assimp ------------------------------------------------
 	std::string filepath = "Trains/Trains.fbx";
